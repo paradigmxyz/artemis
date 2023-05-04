@@ -1,0 +1,79 @@
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+name: Rust
+
+jobs:
+  tests-stable:
+    name: Tests (Stable)
+    runs-on: ubuntu-latest
+    env:
+      ETH_MAINNET_HTTP: https://eth-mainnet.alchemyapi.io/v2/Lc7oIGYeL_QvInzI0Wiu_pOZZDEKBrdf
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+
+      - uses: Swatinem/rust-cache@v1
+        with:
+          cache-on-failure: true
+
+      - name: Install Anvil
+            uses: foundry-rs/foundry-toolchain@v1
+            with:
+                version: nightly
+
+      - name: cargo test
+        run: cargo test --all --all-features
+
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          profile: minimal
+          components: rustfmt, clippy
+          override: true
+
+      - uses: Swatinem/rust-cache@v1
+        with:
+          cache-on-failure: true
+
+      - name: cargo fmt
+        run: cargo +nightly fmt --all -- --check
+
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          components: rustfmt, clippy
+          override: true
+
+      - uses: Swatinem/rust-cache@v1
+        with:
+          cache-on-failure: true
+
+      - name: cargo clippy
+        run: cargo clippy --all --all-features -- -D warnings
+

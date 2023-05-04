@@ -1,0 +1,26 @@
+name: Solidity
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    env:
+      ETH_MAINNET_HTTP: https://eth-mainnet.alchemyapi.io/v2/Lc7oIGYeL_QvInzI0Wiu_pOZZDEKBrdf
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install Foundry
+        uses: onbjerg/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      # We need to run tests for every strategy independently
+      - name: Run Opensea Sudo Arb tests
+        run: forge test --root ./crates/strategies/opensea-sudo-arb/contracts
+
+      - name: Foundry version 
+        run: forge --version

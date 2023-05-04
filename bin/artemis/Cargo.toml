@@ -1,0 +1,21 @@
+[package]
+name = "artemis"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+
+[dependencies]
+ethers = { version = "2", features = ["ws", "rustls"]}
+tokio = { version = "1.18", features = ["full"] }
+dotenv = "0.15.0"
+async-trait = "0.1.64"
+artemis-core = { path = "../../crates/artemis-core" }
+opensea-stream = { git = "https://github.com/FrankieIsLost/opensea-stream-rs"}
+futures = "0.3.27"
+opensea-v2 = { path = "../../crates/clients/opensea-v2" }
+opensea-sudo-arb = { path = "../../crates/strategies/opensea-sudo-arb" }
+anyhow = "1.0.70"
+tracing = "0.1.37"
+tracing-subscriber = "0.3.16"
+clap = { version = "4.2.5", features = ["derive"] }

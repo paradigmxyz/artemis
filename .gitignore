@@ -1,0 +1,18 @@
+# rust build files
+debug/
+target/
+
+**/*.rs.bk
+.DS_Store
+
+# Solidity compiler 
+cache/
+out/
+
+# broadcast logs 
+broadcast/
+
+monitoring/grafana/data/
+
+# Dotenv file
+.env
