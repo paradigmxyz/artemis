@@ -23,18 +23,8 @@ download-protocol-sources:
 generate-bindings: 
     forge bind --bindings-path ./bindings --root ./contracts --crate-name bindings --force
 
+#download sources and generate bindings
 build-bindings-crate: download-protocol-sources generate-bindings
-
-clear-bindings-crate:
-    rm -rf ./bindings
-
-clear-protocols:
-    rm -rf ./contracts/src/protocols
-
-run-example EXAMPLE: 
-    cargo run --example {{EXAMPLE}}
-
-rebuild-bindings: clear-bindings-crate generate-bindings
 
 fmt: 
     cargo +nightly fmt --all
