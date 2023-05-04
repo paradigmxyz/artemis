@@ -20,9 +20,9 @@ At it's core, Artemis is architected as an event processing pipeline. The librar
 
 ## Strategies 
 
-We provide example MEV strategies built using Artemis: 
+The following strategies have been implemented: 
 
-- [Opensea/Sudoswap NFT Arbitrage](/crates/strategies/opensea_sudo_arb/)
+- [Opensea/Sudoswap NFT Arbitrage](/crates/strategies/opensea-sudo-arb/): A strategy implementing atomic, cross-market NFT arbitrage between Seaport and Sudoswap.
 
 ## Build, Test and Run
 
