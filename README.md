@@ -39,17 +39,25 @@ Next, run tests with cargo:
 cargo test --all
 ```
 
-The simplest way to run is Artemis is with the following command: 
+In order to run the opensea sudoswap arbitrage strategy, you can run the following command: 
 
 ```sh
-cargo run
+cargo run -- --wss <INFURA_OR_ALCHEMY_KEY> --opensea-api-key <OPENSEA_API_KEY> --private-key <PRIVATE_KEY> --arb-contract-address <ARB_CONTRACT_ADDRESS> --bid-percentage <BID_PERCENTAGE>
 ```
 
-For convenience, we also provide a dockerized deployment to launch Artemis along with a monitoring and alerting services. You can do this by running 
+where `ARB_CONTRACT_ADDRESS` is the address to which you deploy the [arb contract](/crates/strategies/opensea-sudo-arb/contracts/src/SudoOpenseaArb.sol).
 
-```sh
-docker compose up 
-```
+
+## Acknowledgements
+
+- [subway](https://github.com/libevm/subway)
+- [subway-rs](https://github.com/refcell/subway-rs)
+- [cfmms-rs](https://github.com/0xKitsune/cfmms-rs)
+- [rusty-sando](https://github.com/mouseless-eth/rusty-sando)
+- [bundle-generator](https://github.com/Alcibiades-Capital/mev_bundle_generator/blob/master/Cargo.toml)
+- [ethers-rs](https://github.com/gakonst/ethers-rs)
+- [ethers-flashbots](https://github.com/onbjerg/ethers-flashbots)
+
 
 
 [tg-url]: https://t.me/artemis_devs
