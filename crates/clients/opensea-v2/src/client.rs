@@ -21,7 +21,6 @@ pub struct OpenSeaApiConfig {
 }
 
 impl OpenSeaV2Client {
-
     /// Create a new client with the given configuration.
     pub fn new(cfg: OpenSeaApiConfig) -> Self {
         let mut builder = ClientBuilder::new();
@@ -37,7 +36,7 @@ impl OpenSeaV2Client {
         Self { client }
     }
 
-    /// Call the fulfill listing endpoint, which returns the arguments necessary 
+    /// Call the fulfill listing endpoint, which returns the arguments necessary
     /// to fulfill an order onchain.
     pub async fn fulfill_listing(
         &self,
