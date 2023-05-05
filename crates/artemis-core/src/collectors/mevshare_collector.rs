@@ -56,12 +56,15 @@ impl Collector<MevShareEvent> for MevShareCollector
     async fn get_event_stream(&self) -> Result<CollectorStream<MevShareEvent>> {
         let client = eventsource_client::ClientBuilder::for_url(&self.mevshare_stream_url).unwrap().build();
         let stream = client.stream();
-        let stream = stream.filter_map(|event| match event.unwrap() {
-            SSE::Event(evt) => { 
-                let mev_share_event: MevShareEvent = serde_json::from_str(evt.data.as_str()).unwrap();
-                Some(mev_share_event)
+        let stream = stream.filter_map(|event| match event {
+            Ok(SSE::Event(evt)) => { 
+                match serde_json::from_str(evt.data.as_str()) {
+                    Ok(res) => return res,
+                    Err(_) => return None
+                };
             },
-            SSE::Comment(_) => None
+            Ok(SSE::Comment(_)) => None,
+            Err(_) => None
         });
         Ok(Box::pin(stream))
     }
