@@ -61,7 +61,6 @@ where
 }
 
 impl<M> StateOverrideMiddleware<M> {
-
     /// Adds a code override at a given address.
     pub fn add_code_to_address(&mut self, address: Address, code: Bytes) {
         self.state.account(address).code(code);

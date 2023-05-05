@@ -13,7 +13,6 @@ use crate::types::Executor;
 
 /// A Flashbots executor that sends transactions to the Flashbots relay.
 pub struct FlashbotsExecutor<M, S> {
-
     /// The Flashbots middleware.
     fb_client: FlashbotsMiddleware<Arc<M>, S>,
 
