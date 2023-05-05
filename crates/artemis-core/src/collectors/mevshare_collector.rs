@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 use tokio_stream::StreamExt;
-use std::sync::Arc;
 use ethers::types::{H256, H160, Log};
 use serde::{Deserialize, Serialize};
 
@@ -10,11 +9,12 @@ use crate::types::{Collector, CollectorStream};
 use anyhow::Result;
 
 /// A collector that listens for new transactions in the mempool, and generates a stream of
-/// [events](Transaction) which contain the transaction.
+/// [events](MevShareEvent) which contain the transaction.
 pub struct MevShareCollector {
     mevshare_stream_url: String,
 }
 
+// Txs struct for txs object in MevShareEvent
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Transactions {
@@ -23,6 +23,16 @@ pub struct Transactions {
     pub to: H160
 }
 
+// Follows SSE Event Schema - see https://docs.flashbots.net/flashbots-mev-share/searchers/event-stream
+/* Schema: {
+    hash: string,
+    logs?: LogParams[],
+    txs: Array<{
+        callData?: string,
+        functionSelector?: string,
+        to?: string,
+    }>
+}*/
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MevShareEvent {
     pub hash: H256,
@@ -36,9 +46,9 @@ impl MevShareCollector {
     }
 }
 
-/// Implementation of the [Collector](Collector) trait for the [MempoolCollector](MempoolCollector).
-/// This implementation uses the [PubsubClient](PubsubClient) to subscribe to new transactions.
-// https://mev-share.flashbots.net
+/// Implementation of the [Collector](Collector) trait for the
+/// [MevShareCollector](MevShareCollector).
+/// This implementation uses the Flashbots SSE endpoint to stream events.
 
 #[async_trait]
 impl Collector<MevShareEvent> for MevShareCollector
@@ -46,14 +56,12 @@ impl Collector<MevShareEvent> for MevShareCollector
     async fn get_event_stream(&self) -> Result<CollectorStream<MevShareEvent>> {
         let client = eventsource_client::ClientBuilder::for_url(&self.mevshare_stream_url).unwrap().build();
         let stream = client.stream();
-        let stream = stream.filter_map(|event| {
-            match event.unwrap() {
-                SSE::Event(evt) => { 
-                    let mev_share_event: MevShareEvent = serde_json::from_str(evt.data.as_str()).unwrap();
-                    Some(mev_share_event)
-                },
-                SSE::Comment(_) => None
-            }
+        let stream = stream.filter_map(|event| match event.unwrap() {
+            SSE::Event(evt) => { 
+                let mev_share_event: MevShareEvent = serde_json::from_str(evt.data.as_str()).unwrap();
+                Some(mev_share_event)
+            },
+            SSE::Comment(_) => None
         });
         Ok(Box::pin(stream))
     }
