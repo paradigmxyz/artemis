@@ -14,6 +14,7 @@ futures = "0.3"
 tokio-tungstenite = "*"
 async-trait = "0.1.64"
 opensea-stream = { git = "https://github.com/FrankieIsLost/opensea-stream-rs"}
+mev-share-rs = { git = "https://github.com/mattsse/mev-share-rs" }
 ethers-flashbots = { git = "https://github.com/FrankieIsLost/ethers-flashbots", features = ["rustls"] }
 reqwest = { version = "0.11.14", default-features = false, features = ["rustls-tls"] }
 serde = "1.0.152"
@@ -23,7 +24,6 @@ async-stream = "0.3.4"
 anyhow = "1.0.70"
 thiserror = "1.0.40"
 tracing = "0.1.37"
-eventsource-client = "0.11.0"
 
 
 [build-dependencies]
