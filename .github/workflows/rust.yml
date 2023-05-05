@@ -28,9 +28,9 @@ jobs:
           cache-on-failure: true
 
       - name: Install Anvil
-            uses: foundry-rs/foundry-toolchain@v1
-            with:
-                version: nightly
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
 
       - name: cargo test
         run: cargo test --all --all-features
