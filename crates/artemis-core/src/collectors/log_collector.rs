@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use ethers::{
     prelude::Middleware,
     providers::PubsubClient,
-    types::{Filter, H256, Bytes},
+    types::{Bytes, Filter, H256},
 };
 use std::sync::Arc;
 use tokio_stream::StreamExt;
