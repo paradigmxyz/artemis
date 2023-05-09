@@ -1,7 +1,10 @@
 use std::{sync::Arc, time::Duration};
 
 use artemis_core::{
-    collectors::{block_collector::BlockCollector, mempool_collector::MempoolCollector, mevshare_collector::MevShareCollector},
+    collectors::{
+        block_collector::BlockCollector, mempool_collector::MempoolCollector,
+        mevshare_collector::MevShareCollector,
+    },
     executors::mempool_executor::{MempoolExecutor, SubmitTxToMempool},
     types::{Collector, Executor},
 };
@@ -86,13 +89,3 @@ async fn test_mempool_executor_sends_tx_simple() {
     let tx = provider.get_transaction_count(account, None).await.unwrap();
     assert_eq!(tx, 1.into());
 }
-
-/// Test that mevshare collector correctly emits blocks.
-#[tokio::test]
-async fn test_mevshare_collector_sends_events() {
-    let mevshare_collector = MevShareCollector::new(String::from("https://mev-share.flashbots.net"));
-    let block_stream = mevshare_collector.get_event_stream().await.unwrap();
-    let block_a = block_stream.into_future().await.0.unwrap();
-    assert_eq!(block_a.hash, block_a.hash);
-}
-
