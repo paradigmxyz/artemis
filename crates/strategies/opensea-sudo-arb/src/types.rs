@@ -34,7 +34,7 @@ pub fn hash_to_fulfill_listing_request(hash: H256) -> FulfillListingRequest {
         listing: Listing {
             hash,
             chain: Chain::Mainnet,
-            protocol_version: ProtocolVersion::V1_4,
+            protocol_version: ProtocolVersion::V1_5,
         },
         fulfiller: Fulfiller {
             address: H160::zero(),
