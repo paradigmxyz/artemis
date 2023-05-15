@@ -18,10 +18,6 @@ pub struct StrategyParser {
 
     #[clap(long, short)]
     strategy_name: String,
-
-    /// Create the project even if the specified root directory is not empty.
-    #[clap(long)]
-    force: bool,
 }
 
 impl StrategyParser {
