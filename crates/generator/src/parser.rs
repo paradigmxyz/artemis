@@ -1,5 +1,4 @@
 use anyhow::{Error, Result};
-use cargo_edit::Dependency;
 use clap::{Parser, ValueHint};
 use convert_case::{Case, Casing};
 use quote::__private::TokenStream;
@@ -59,7 +58,11 @@ fn generate_crate(
     lib: TokenStream,
 ) -> Result<(), Error> {
     // Crate name and dependencies
-    let dependencies = vec![("anyhow", "1.0"), ("ethers", "0.4"), ("async-trait", "0.1")];
+    let dependencies = vec![
+        ("anyhow", "1.0"),
+        ("ethers", "2"),
+        ("async-trait", "0.1.64"),
+    ];
 
     let path = root.as_path().display();
 
@@ -139,7 +142,8 @@ edition = "2021"
 
 [dependencies]
 {}
+{}
 "#,
-        crate_name, dependencies_str
+        crate_name, dependencies_str, r#"artemis-core = { path = "../../artemis-core" }"#,
     )
 }
