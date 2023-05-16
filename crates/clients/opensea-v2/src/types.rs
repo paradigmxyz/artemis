@@ -4,7 +4,7 @@ use ethers::types::{Bytes, Chain, H160, H256, U256};
 use serde::{de, Deserialize, Serialize, Serializer};
 use thiserror::Error;
 
-use super::constants::{SEAPORT_V1, SEAPORT_V4};
+use super::constants::{SEAPORT_V1, SEAPORT_V4, SEAPORT_V5};
 
 /// Request to fulfill a listing on OpenSea.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -44,6 +44,7 @@ pub struct FulfillListingResponse {
 pub enum ProtocolVersion {
     V1_1,
     V1_4,
+    V1_5,
 }
 
 /// Information needed to fulfill the listing.
@@ -133,6 +134,7 @@ fn protocol_version_to_str<S: Serializer>(
     let protocol_version_str = match protocol_version {
         ProtocolVersion::V1_1 => SEAPORT_V1,
         ProtocolVersion::V1_4 => SEAPORT_V4,
+        ProtocolVersion::V1_5 => SEAPORT_V5,
     };
     serializer.serialize_str(protocol_version_str)
 }

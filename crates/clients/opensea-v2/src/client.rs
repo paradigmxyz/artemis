@@ -66,6 +66,18 @@ mod tests {
         println!("{}", d.display());
         let res = std::fs::read_to_string(d).unwrap();
         let res: FulfillListingResponse = serde_json::from_str(&res).unwrap();
+        assert_eq!(res.protocol, "seaport1.4");
         assert_eq!(res.fulfillment_data.transaction.value, 1780000000000000000);
+    }
+
+    #[test]
+    fn can_deserialize_seaport_v5_response() {
+        let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        d.push("resources/sample_response_1.5.json");
+        println!("{}", d.display());
+        let res = std::fs::read_to_string(d).unwrap();
+        let res: FulfillListingResponse = serde_json::from_str(&res).unwrap();
+        assert_eq!(res.protocol, "seaport1.5");
+        assert_eq!(res.fulfillment_data.transaction.value, 20000000000000000);
     }
 }
