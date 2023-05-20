@@ -12,7 +12,7 @@
 
 Artemis is a framework for writing MEV bots in Rust. It's designed to be simple, modular, and fast. 
 
-At it's core, Artemis is architected as an event processing pipeline. The library is made up of three main components: 
+At its core, Artemis is architected as an event processing pipeline. The library is made up of three main components: 
 
 1. *Collectors*: *Collectors* take in external events (such as pending txs, new blocks, marketplace orders, etc. ) and turn them into an internal *event* representation. 
 2. *Strategies*: *Strategies* contain the core logic required for each MEV opportunity. They take in *events* as inputs, and compute whether any opportunities are available (for example, a strategy might listen to a stream of marketplace orders to see if there are any cross-exchange arbs). *Strategies* produce *actions*.
