@@ -2414,6 +2414,7 @@ dependencies = [
  "ethers",
  "reqwest",
  "serde",
+ "serde_json",
  "thiserror",
 ]
 
