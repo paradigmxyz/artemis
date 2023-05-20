@@ -2,19 +2,18 @@ use anyhow::{Error, Result};
 use clap::{Parser, ValueHint};
 use convert_case::{Case, Casing};
 use quote::__private::TokenStream;
+use std::ffi::OsString;
 use std::fs::{create_dir, File};
 use std::io::Write;
-
-use std::{path::PathBuf, process::Command};
+use std::process::Command;
 
 use crate::init::{generate_constants, generate_lib, generate_strategy, generate_types};
 
-/// CLI arguments for `forge init`.
 #[derive(Debug, Clone, Parser)]
 pub struct StrategyParser {
     /// The root directory of the new project.
-    #[clap(value_hint = ValueHint::DirPath, default_value = "crates/strategies/", value_name = "PATH")]
-    root: PathBuf,
+    #[clap(value_hint = ValueHint::DirPath, default_value = "crates/strategies/")]
+    root: OsString,
 
     #[clap(long, short)]
     strategy_name: String,
@@ -47,7 +46,7 @@ impl StrategyParser {
 
 fn generate_crate(
     crate_name: &str,
-    root: &PathBuf,
+    root: &OsString,
     strategy: TokenStream,
     constants: TokenStream,
     types: TokenStream,
@@ -60,16 +59,16 @@ fn generate_crate(
         ("async-trait", "0.1.64"),
     ];
 
-    let path = root.as_path().display();
+    let path = root.as_os_str();
 
-    let path_and_crate = path.to_string() + crate_name;
+    let path_and_crate = path.to_str().unwrap().to_owned() + crate_name;
 
     // Create crate directory
     create_dir(&path_and_crate)?;
 
     // Create src directory
     let src_dir = format!("{}/src", path_and_crate);
-    create_dir(&src_dir)?;
+    create_dir(src_dir)?;
 
     // Generate lib.rs file
     let lib_file = format!("{}/src/lib.rs", path_and_crate);
@@ -93,7 +92,7 @@ fn generate_crate(
 
     // Generate Cargo.toml file
     let cargo_toml_file = format!("{}/Cargo.toml", path_and_crate);
-    let cargo_toml_code = generate_cargo_toml_code(&crate_name, &dependencies);
+    let cargo_toml_code = generate_cargo_toml_code(crate_name, &dependencies);
     write_to_file(&cargo_toml_file, &cargo_toml_code)?;
 
     // Format the generated code using rustfmt
