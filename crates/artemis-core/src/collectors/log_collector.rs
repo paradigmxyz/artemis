@@ -41,7 +41,7 @@ where
     M::Provider: PubsubClient,
     M::Error: 'static,
 {
-    async fn get_event_stream(&self) -> Result<CollectorStream<NewLog>> {
+    async fn get_event_stream(&self) -> Result<CollectorStream<'_, NewLog>> {
         let stream = self.provider.subscribe_logs(&self.filter).await?;
         let stream = stream.filter_map(|log| {
             let topic0 = log.topics.get(0).copied();

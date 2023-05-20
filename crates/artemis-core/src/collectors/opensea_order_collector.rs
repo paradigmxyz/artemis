@@ -31,7 +31,7 @@ pub struct OpenseaOrder {
 /// Implementation of the [Collector](Collector) trait for the [OpenseaOrderCollector](OpenseaOrderCollector).
 #[async_trait]
 impl Collector<OpenseaOrder> for OpenseaOrderCollector {
-    async fn get_event_stream(&self) -> Result<CollectorStream<OpenseaOrder>> {
+    async fn get_event_stream(&self) -> Result<CollectorStream<'_, OpenseaOrder>> {
         let mut client = client(Network::Mainnet, &self.api_key).await;
 
         let collection = Collection::All;

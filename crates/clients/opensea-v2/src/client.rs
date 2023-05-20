@@ -56,6 +56,7 @@ impl OpenSeaV2Client {
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
     use std::path::PathBuf;
 
