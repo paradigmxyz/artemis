@@ -5,8 +5,6 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 ethers = {  version = "2", features = ["ws", "rustls"]}
 serde = "1.0.152"
@@ -18,3 +16,4 @@ http = "0.2.9"
 hyper = { version = "0.14.26", features = ["stream"] }
 futures-util = "0.3.28"
 futures = "0.3.28"
+tokio = { version = "1.18", features = ["full"] }
