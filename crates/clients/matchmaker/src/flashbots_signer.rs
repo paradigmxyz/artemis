@@ -95,12 +95,11 @@ mod tests {
     use ethers::{
         prelude::rand::{thread_rng, Rng},
         signers::LocalWallet,
-        utils::hex,
     };
-    use http::{header, HeaderValue, Response};
+    use http::Response;
     use hyper::Body;
     use std::convert::Infallible;
-    use tower::{service_fn, ServiceBuilder, ServiceExt};
+    use tower::{service_fn, ServiceExt};
 
     #[tokio::test]
     async fn test_signature() {

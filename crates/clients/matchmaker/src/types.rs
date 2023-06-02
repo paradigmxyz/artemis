@@ -1,5 +1,5 @@
 use ethers::types::{Bytes, H256, U64};
-use serde::{de, Deserialize, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -55,10 +55,10 @@ impl BundleRequest {
         transactions: Vec<BundleTx>,
     ) -> Self {
         Self {
-            version: version,
+            version,
             inclusion: Inclusion {
                 block: block_num,
-                max_block: max_block,
+                max_block,
             },
             body: transactions,
         }

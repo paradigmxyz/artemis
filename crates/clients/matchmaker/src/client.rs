@@ -6,7 +6,7 @@ use jsonrpsee::core::client::ClientT;
 use jsonrpsee::core::Error as RpcError;
 use jsonrpsee::http_client::{transport::HttpBackend, HttpClient, HttpClientBuilder};
 
-use tower::{Layer, ServiceBuilder};
+use tower::ServiceBuilder;
 
 use crate::{
     flashbots_signer::{FlashbotsSigner, FlashbotsSignerLayer},
