@@ -148,6 +148,7 @@ dependencies = [
  "ethers",
  "ethers-flashbots",
  "futures",
+ "matchmaker",
  "mev-share-rs",
  "opensea-stream",
  "reqwest",
