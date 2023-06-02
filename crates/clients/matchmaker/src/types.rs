@@ -82,7 +82,7 @@ impl BundleRequest {
         }
     }
 
-    /// Helper function to create a simple bundle request with sensible defaults.
+    /// Helper function to create a simple bundle request with sensible defaults (bundle is valid for the next 5 blocks).
     pub fn make_simple(block_num: U64, transactions: Vec<BundleTx>) -> Self {
         // bundle is valid for 5 blocks
         let max_block = block_num.saturating_add(U64::from(5));
