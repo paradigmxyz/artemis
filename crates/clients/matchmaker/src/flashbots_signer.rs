@@ -92,18 +92,60 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use http::{header, HeaderValue};
+    use ethers::{
+        prelude::rand::{thread_rng, Rng},
+        signers::LocalWallet,
+        utils::hex,
+    };
+    use http::{header, HeaderValue, Response};
     use hyper::Body;
     use std::convert::Infallible;
-    use tower::{service_fn, ServiceExt};
+    use tower::{service_fn, ServiceBuilder, ServiceExt};
 
     #[tokio::test]
-    async fn test_override_mode() {
-        // let svc = FlashbotsSigner
-        // let res = svc.oneshot(Request::new(Body::empty())).await.unwrap();
+    async fn test_signature() {
+        let fb_signer = Arc::new(LocalWallet::new(&mut thread_rng()));
 
-        // let mut values = res.headers().get_all(header::CONTENT_TYPE).iter();
-        // assert_eq!(values.next().unwrap(), "text/html");
-        // assert_eq!(values.next(), None);
+        // mock service that returns the request headers
+        let svc = FlashbotsSigner {
+            signer: fb_signer.clone(),
+            inner: service_fn(|_req: Request<Body>| async {
+                let (parts, _) = _req.into_parts();
+
+                let mut res = Response::builder();
+                for (k, v) in parts.headers.iter() {
+                    res = res.header(k, v);
+                }
+                let res = res.body(Body::empty()).unwrap();
+                Ok::<_, Infallible>(res)
+            }),
+        };
+
+        // generate a random set of bytes for the payload
+        let mut rng = thread_rng();
+        let mut bytes = vec![0u8; 32];
+        rng.fill(&mut bytes[..]);
+
+        let res = svc
+            .oneshot(Request::new(Body::from(bytes.clone())))
+            .await
+            .unwrap();
+
+        let header = res.headers().get("x-flashbots-signature").unwrap();
+        let header = header.to_str().unwrap();
+        let header = header.split(":0x").collect::<Vec<_>>();
+        let header_address = header[0];
+        let header_signature = header[1];
+
+        let signer_address = format!("{:?}", fb_signer.address());
+        let expected_signature = fb_signer
+            .sign_message(format!("0x{:x}", H256::from(keccak256(bytes.clone()))))
+            .await
+            .unwrap()
+            .to_string();
+
+        // verify that the header contains expected address and signature
+        assert_eq!(header_address, signer_address);
+        assert_eq!(header_signature, expected_signature);
     }
 }

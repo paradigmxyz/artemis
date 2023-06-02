@@ -19,7 +19,6 @@ pub struct Client<S> {
 }
 
 impl<S: Signer + Clone + 'static> Client<S> {
-
     /// Create a new client with the given signer and chain
     pub fn new(signer: S, chain: Chain) -> Self {
         let url = match chain {

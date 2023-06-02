@@ -1,5 +1,5 @@
-use ethers::{types::{Bytes, H256, U64}};
-use serde::{Deserialize, Serialize, Serializer, de};
+use ethers::types::{Bytes, H256, U64};
+use serde::{de, Deserialize, Serialize, Serializer};
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -17,15 +17,19 @@ pub struct Inclusion {
     pub max_block: Option<U64>,
 }
 
-
 /// A bundle tx, which can either be a transaction hash, or a full tx
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 #[serde(rename_all = "camelCase")]
 pub enum BundleTx {
-    TxHash { hash: H256 },
+    TxHash {
+        hash: H256,
+    },
     #[serde(rename_all = "camelCase")]
-    Tx { tx: Bytes, can_revert: bool },
+    Tx {
+        tx: Bytes,
+        can_revert: bool,
+    },
 }
 
 #[derive(Deserialize, Debug, Serialize)]
@@ -44,7 +48,12 @@ pub enum ProtocolVersion {
 }
 
 impl BundleRequest {
-    pub fn new(block_num: U64, max_block: Option<U64>, version: ProtocolVersion, transactions: Vec<BundleTx>) -> Self {
+    pub fn new(
+        block_num: U64,
+        max_block: Option<U64>,
+        version: ProtocolVersion,
+        transactions: Vec<BundleTx>,
+    ) -> Self {
         Self {
             version: version,
             inclusion: Inclusion {
@@ -58,14 +67,18 @@ impl BundleRequest {
     pub fn make_simple(block_num: U64, transactions: Vec<BundleTx>) -> Self {
         // bundle is valid for 5 blocks
         let max_block = block_num.saturating_add(U64::from(5));
-        Self::new(block_num, Some(max_block), ProtocolVersion::Beta1, transactions)
+        Self::new(
+            block_num,
+            Some(max_block),
+            ProtocolVersion::Beta1,
+            transactions,
+        )
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::types::BundleRequest;
-
 
     #[test]
     fn can_deserialize() {
@@ -84,6 +97,4 @@ mod tests {
         let res: Result<Vec<BundleRequest>, _> = serde_json::from_str(str);
         assert!(res.is_ok());
     }
-
-    
 }
