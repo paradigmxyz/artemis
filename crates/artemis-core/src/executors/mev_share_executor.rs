@@ -1,16 +1,7 @@
-use std::{
-    ops::{Div, Mul},
-    sync::Arc,
-};
-
 use crate::types::Executor;
-use anyhow::{Context, Result};
+use anyhow::Result;
 use async_trait::async_trait;
-use ethers::{
-    providers::Middleware,
-    signers::Signer,
-    types::{transaction::eip2718::TypedTransaction, Chain, U256},
-};
+use ethers::{signers::Signer, types::Chain};
 use futures::{stream, StreamExt};
 use matchmaker::{client::Client, types::BundleRequest};
 use tracing::{error, info};

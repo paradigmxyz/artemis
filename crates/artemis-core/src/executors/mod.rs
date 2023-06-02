@@ -7,3 +7,6 @@ pub mod flashbots_executor;
 
 /// This executor submits transactions to the public mempool.
 pub mod mempool_executor;
+
+/// This executor submits bundles to the flashbots matchmaker.
+pub mod mev_share_executor;
