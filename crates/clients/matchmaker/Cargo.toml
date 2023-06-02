@@ -6,7 +6,7 @@ license = "MIT OR Apache-2.0"
 
 
 [dependencies]
-ethers = {  version = "2", features = ["ws", "rustls"]}
+ethers = { version = "2", features = ["ws", "rustls"]}
 serde = "1.0.152"
 serde_json = { version = "1.0", features = ["arbitrary_precision"] }
 jsonrpsee = { version = "0.18.2", features = ["http-client", "client"] }
