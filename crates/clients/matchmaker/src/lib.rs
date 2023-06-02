@@ -9,15 +9,15 @@
 //! [MEV-share spec](https://github.com/flashbots/mev-share).
 //!
 //! # Example
-//! ```rust
+//! ```no_run
+//!
 //! use ethers::signers::Signer;
-//! use eyre::Result;
 //! use ethers::{core::rand::thread_rng, signers::LocalWallet};
 //! use ethers::types::{Chain, TransactionRequest, H256, U64};
 //! use matchmaker::client::Client;
 //! use matchmaker::types::{BundleTx, BundleRequest};
 //!
-//!     
+//! # tokio_test::block_on(async {    
 //! // The signer used to authenticate bundles
 //! let fb_signer = LocalWallet::new(&mut thread_rng());
 //!
@@ -49,6 +49,7 @@
 //! // Send bundle
 //! let resp = matchmaker_client.send_bundle(&bundle).await;
 //!  println!("Got a bundle response: {:?}", resp);
+//! # });
 //! ```
 
 /// Core client implementation

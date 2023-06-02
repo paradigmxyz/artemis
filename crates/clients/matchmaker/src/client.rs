@@ -23,8 +23,8 @@ impl<S: Signer + Clone + 'static> Client<S> {
     /// Create a new client with the given signer and chain
     pub fn new(signer: S, chain: Chain) -> Self {
         let url = match chain {
-            Chain::Mainnet => "https://relay.flashbots.net",
-            Chain::Goerli => "https://relay-goerli.flashbots.net",
+            Chain::Mainnet => "https://relay.flashbots.net:443",
+            Chain::Goerli => "https://relay-goerli.flashbots.net:443",
             _ => panic!("Unsupported chain"),
         };
         Self::from_url(signer, url)
