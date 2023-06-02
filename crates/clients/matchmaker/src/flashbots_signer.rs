@@ -17,12 +17,12 @@ use tower::{Layer, Service};
 
 /// Layer that applies [`FlashbotsSigner`] which adds a request header with a signed payload.
 #[derive(Clone)]
-pub struct FlashbotsSignerLayer<S> {
+pub(crate) struct FlashbotsSignerLayer<S> {
     signer: Arc<S>,
 }
 
 impl<S> FlashbotsSignerLayer<S> {
-    pub fn new(signer: Arc<S>) -> Self {
+    pub(crate) fn new(signer: Arc<S>) -> Self {
         FlashbotsSignerLayer { signer }
     }
 }

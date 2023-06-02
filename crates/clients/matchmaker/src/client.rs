@@ -15,6 +15,7 @@ use crate::{
 
 /// Matchmaker client to interact with MEV-share
 pub struct Client<S> {
+    /// Underlying HTTP client
     pub http_client: HttpClient<FlashbotsSigner<S, HttpBackend>>,
 }
 
