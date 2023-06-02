@@ -1,0 +1,22 @@
+[package]
+name = "matchmaker"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+
+[dependencies]
+ethers = { version = "2", features = ["ws", "rustls"]}
+serde = "1.0.152"
+serde_json = { version = "1.0", features = ["arbitrary_precision"] }
+jsonrpsee = { version = "0.18.2", features = ["http-client", "client"] }
+tower = "0.4.13"
+tower-http = { version = "0.4.0", features = ["set-header"] }
+http = "0.2.9"
+hyper = { version = "0.14.26", features = ["stream"] }
+futures-util = "0.3.28"
+futures = "0.3.28"
+tokio = { version = "1.18", features = ["full"] }
+
+[dev-dependencies]
+tokio-test = "0.4.2"
