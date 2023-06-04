@@ -1,3 +1,3 @@
-SudoOpenseaArbTest:testArb() (gas: 481482)
+SudoOpenseaArbTest:testArb() (gas: 479364)
 SudoPairQuoterTest:testCorrectSingleQuote() (gas: 38910)
 SudoPairQuoterTest:testCorrectnessMultiQuote() (gas: 50341)
