@@ -57,7 +57,7 @@ contract SudoOpenseaArbTest is Test {
         payable(address(sudoPool)).transfer(buyPrice);
         // execute arb
         uint256 initialBalance = address(arb).balance;
-        vm.expectRevert("no profit");
+        vm.expectRevert(SudoOpenseaArb.NoProfit.selector);
         arb.executeArb(order, price, payable(address(sudoPool)));
         uint256 finalBalance = address(arb).balance;
         assertTrue(finalBalance == initialBalance);
