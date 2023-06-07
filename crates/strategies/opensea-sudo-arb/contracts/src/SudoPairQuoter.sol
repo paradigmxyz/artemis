@@ -9,7 +9,7 @@ import {CurveErrorCodes} from "./protocols/LSSVMPairFactory/contracts/bonding-cu
 
 /// @title Sudo Pair Quoter
 /// @author FrankieIsLost <frankie@paradigm.xyz>
-/// @notice An contract to simplify getting sell quotes from sudo pools
+/// @notice A contract to simplify getting sell quotes from sudo pools
 contract SudoPairQuoter {
 
     /// Note that this contract CANNOT set storage, since we are injecting its bytecode into a eth_call code override 

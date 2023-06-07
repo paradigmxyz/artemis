@@ -46,6 +46,23 @@ contract SudoOpenseaArbTest is Test {
         assertTrue(finalBalance > initialBalance);
     }
 
+    function testUnprofitableArb() public {
+        vm.selectFork(mainnetFork);
+        (BasicOrderParameters memory order, uint256 price) = getOrderAndPrice();
+        // fund arb contract
+        vm.deal(address(arb), price);
+        //set up sudo pool
+        uint128 buyPrice = uint128(order.considerationAmount - 1);
+        LSSVMPairETH sudoPool = setupSudoPool(order.offerToken, buyPrice);
+        payable(address(sudoPool)).transfer(buyPrice);
+        // execute arb
+        uint256 initialBalance = address(arb).balance;
+        vm.expectRevert(SudoOpenseaArb.NoProfit.selector);
+        arb.executeArb(order, price, payable(address(sudoPool)));
+        uint256 finalBalance = address(arb).balance;
+        assertTrue(finalBalance == initialBalance);
+    }
+
     // return a basic order we want to fulfill for our arb 
     // this is a real order pulled from the opensea api 
     function getOrderAndPrice() internal pure returns (BasicOrderParameters memory, uint256 price) {
