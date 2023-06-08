@@ -32,7 +32,7 @@ This strategy relies on two contracts:
 In order to run the solidity test, you need access to an alchemy/infura key. You can run tests with the following command: 
 
 ```sh
-ETH_MAINNET_HTTP=<YOUR_KEY> forge test --root ./contracts
+ETH_MAINNET_HTTP=<YOUR_RPC_URL> forge test --root ./contracts
 ```
 
 You can run the rust tests with the following command: 
@@ -44,5 +44,5 @@ cargo test
 And if you need to regenerate rust bindings for contracts, you can run 
 
 ```sh
-forge bind --bindings-path ./bindings --root ./contracts --crate-name bindings
+forge bind --bindings-path ./bindings --root ./contracts --crate-name bindings --overwrite
 ```

@@ -9,9 +9,11 @@ import {Owned} from "solmate/auth/Owned.sol";
 
 contract SudoOpenseaArb is Owned {
 
+    error NoProfit();
+
     constructor() Owned(msg.sender) {}
 
-    Seaport seaport = Seaport(0x00000000000001ad428e4906aE43D8F9852d0dD6);
+    Seaport constant seaport = Seaport(0x00000000000001ad428e4906aE43D8F9852d0dD6);
 
     function executeArb(BasicOrderParameters calldata basicOrder, uint256 paymentValue, address payable sudo_pool) public {
         
@@ -36,7 +38,7 @@ contract SudoOpenseaArb is Owned {
         );
 
         // revert if we didn't make a profit
-        require(address(this).balance > initialBalance, "no profit");
+        if (address(this).balance <= initialBalance) revert NoProfit();
     }
 
     function withdraw() public onlyOwner {
