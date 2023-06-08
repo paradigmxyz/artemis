@@ -35,7 +35,7 @@ async fn test_block_collector_sends_blocks() {
         .await
         .unwrap()
         .unwrap();
-    assert_eq!(block_a.hash, block_b.hash.unwrap());
+    assert_eq!(block_a.block.hash.unwrap(), block_b.hash.unwrap());
 }
 
 /// Test that mempool collector correctly emits blocks.
