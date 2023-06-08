@@ -2485,6 +2485,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "mev-share-arb"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "artemis-core",
+ "async-trait",
+ "clap 4.2.7",
+ "dotenv",
+ "ethers",
+ "futures",
+ "mev-share-uni-arb",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "mev-share-bindings"
 version = "0.1.0"
 dependencies = [
