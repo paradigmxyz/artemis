@@ -2466,7 +2466,7 @@ dependencies = [
 [[package]]
 name = "mev-share-rs"
 version = "0.1.0"
-source = "git+https://github.com/mattsse/mev-share-rs#bccab1ff88460232bc921bddf0909ddca9c6df7f"
+source = "git+https://github.com/mattsse/mev-share-rs#e3700e6db789bba8357985e5686d4a4d5e70e829"
 dependencies = [
  "async-sse",
  "bytes",
