@@ -126,7 +126,7 @@
         __ERROR(Unauthorized)   // [unauthorized_err]
         0x00                    // [mem_ptr, unauthorized_err]
         mstore                  // []
-        0x20                    // [mem_len]
+        0x04                    // [mem_len]
         0x00                    // [mem_ptr, mem_len]
         revert                  // []
 
@@ -135,7 +135,7 @@
         0x00                    // [ret_ptr, ret_len]
         0x00                    // [arg_len, ret_ptr, ret_len]
         0x00                    // [arg_ptr, arg_len, ret_ptr, ret_len]
-        balance                 // [value, arg_ptr, arg_len, ret_ptr, ret_len]
+        selfbalance             // [value, arg_ptr, arg_len, ret_ptr, ret_len]
         caller                  // [target, value, arg_ptr, arg_len, ret_ptr, ret_len]
         gas                     // [gas, target, value, arg_ptr, arg_len, ret_ptr, ret_len]
         call                    // [success]
@@ -165,7 +165,7 @@
         __ERROR(Unauthorized)   // [unauthorized_err]
         0x00                    // [mem_ptr, unauthorized_err]
         mstore                  // []
-        0x20                    // [mem_len]
+        0x04                    // [mem_len]
         0x00                    // [mem_ptr, mem_len]
         revert                  // []
 
