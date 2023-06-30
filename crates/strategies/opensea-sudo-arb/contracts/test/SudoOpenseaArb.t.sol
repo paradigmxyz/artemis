@@ -13,10 +13,11 @@ import {BasicOrderParameters, AdditionalRecipient} from "../src/protocols/Seapor
 import {BasicOrderType} from "../src/protocols/Seaport/contracts/lib/ConsiderationEnums.sol";
 import {IERC721} from "../src/protocols/LSSVMPairFactory/contracts/imports/IERC721.sol";
 import {SudoOpenseaArb} from "../src/SudoOpenseaArb.sol";
+import {SudoOpenseaArbCompiled} from "../src/huff/SudoOpenseaArbCompiled.sol";
 import {FixedPointMathLib} from "../lib/solmate/src/utils/FixedPointMathLib.sol";
 
 contract SudoOpenseaArbTest is Test {
-    
+
     uint256 mainnetFork;
     LSSVMPairFactory pairFactory = LSSVMPairFactory(payable(0xb16c1342E617A5B6E4b631EB114483FDB289c0A4));
     ICurve curve = ICurve(0x5B6aC51d9B1CeDE0068a1B26533CAce807f883Ee);
@@ -26,8 +27,7 @@ contract SudoOpenseaArbTest is Test {
         string memory MAINNET_RPC_URL = vm.envString("ETH_MAINNET_HTTP");
         mainnetFork = vm.createFork(MAINNET_RPC_URL, 16801465); // block where specific order is available
         vm.selectFork(mainnetFork);
-        arb = new SudoOpenseaArb();
-
+        arb = SudoOpenseaArb(SudoOpenseaArbCompiled.deploy());
     }
 
     function testArb() public {
@@ -98,7 +98,6 @@ contract SudoOpenseaArbTest is Test {
 
     // set up pool buying NFTs at price 
     function setupSudoPool(address nft, uint128 price) internal returns (LSSVMPairETH sudoPool) {
-
         sudoPool = pairFactory.createPairETH(
             IERC721(nft), 
             curve, 
