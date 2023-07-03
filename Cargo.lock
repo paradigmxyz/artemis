@@ -149,7 +149,7 @@ dependencies = [
  "ethers-flashbots",
  "futures",
  "matchmaker",
- "mev-share-rs",
+ "mev-share-sse",
  "opensea-stream",
  "reqwest",
  "thiserror",
@@ -2464,9 +2464,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "mev-share-rs"
+name = "mev-share-sse"
 version = "0.1.0"
-source = "git+https://github.com/mattsse/mev-share-rs#e3700e6db789bba8357985e5686d4a4d5e70e829"
+source = "git+https://github.com/mattsse/mev-share-rs#92da66054c868d53926b266e8901cfda91317cac"
 dependencies = [
  "async-sse",
  "bytes",
