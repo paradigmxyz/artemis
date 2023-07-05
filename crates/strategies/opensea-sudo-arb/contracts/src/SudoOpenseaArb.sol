@@ -8,36 +8,43 @@ import {IERC721} from "../src/protocols/LSSVMPairFactory/contracts/imports/IERC7
 import {Owned} from "solmate/auth/Owned.sol";
 
 contract SudoOpenseaArb is Owned {
-
     error NoProfit();
 
     constructor() Owned(msg.sender) {}
 
-    Seaport constant seaport = Seaport(0x00000000000001ad428e4906aE43D8F9852d0dD6);
+    Seaport constant seaport =
+        Seaport(0x00000000000000ADc04C56Bf30aC9d3c0aAF14dC);
 
-    function executeArb(BasicOrderParameters calldata basicOrder, uint256 paymentValue, address payable sudo_pool) public {
-        
+    function executeArb(
+        BasicOrderParameters calldata basicOrder,
+        uint256 paymentValue,
+        address payable sudo_pool
+    ) public {
         uint256 initialBalance = address(this).balance;
 
-        // buy NFT on opensea
+        // Buy NFT on OpenSea.
         seaport.fulfillBasicOrder{value: paymentValue}(basicOrder);
 
-        // set approval for sudo pool 
-        IERC721(basicOrder.offerToken).approve(sudo_pool, basicOrder.offerIdentifier);
+        // Set approval for Sudoswap pool.
+        IERC721(basicOrder.offerToken).approve(
+            sudo_pool,
+            basicOrder.offerIdentifier
+        );
 
-        // sell into pool
+        // Sell into Sudoswap pool.
         uint256[] memory nftIds = new uint256[](1);
+
         nftIds[0] = basicOrder.offerIdentifier;
 
         LSSVMPairETH(sudo_pool).swapNFTsForToken(
             nftIds,
-            0, // we don't need to set min output since we revert later on if execution isn't profitable
+            0, // No need to set min. output since we might revert later on if execution isn't profitable.
             payable(address(this)),
             false,
             address(0)
         );
 
-        // revert if we didn't make a profit
+        // Revert if trade wasn't profitable.
         if (address(this).balance <= initialBalance) revert NoProfit();
     }
 
@@ -45,8 +52,7 @@ contract SudoOpenseaArb is Owned {
         payable(msg.sender).transfer(address(this).balance);
     }
 
-    fallback() external payable {}
-
     receive() external payable {}
 
+    fallback() external payable {}
 }
