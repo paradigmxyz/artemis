@@ -12,10 +12,6 @@ contract SudoOpenseaArb is Owned {
 
     constructor() Owned(msg.sender) {}
 
-    receive() external payable {}
-
-    fallback() external payable {}
-
     Seaport constant seaport =
         Seaport(0x00000000000000ADc04C56Bf30aC9d3c0aAF14dC);
 
@@ -55,4 +51,8 @@ contract SudoOpenseaArb is Owned {
     function withdraw() public onlyOwner {
         payable(msg.sender).transfer(address(this).balance);
     }
+
+    receive() external payable {}
+
+    fallback() external payable {}
 }
