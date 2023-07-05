@@ -1,6 +1,6 @@
 # Artemis Sudo x Seaport Arbitrage Strategy
 
-This outlines the Huff implementation, ABI specification, and 
+This outlines the Huff implementation, ABI specification, and contains a rough solidity reference implementation.
 
 ## Gas
 
