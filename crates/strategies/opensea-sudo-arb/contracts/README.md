@@ -198,7 +198,6 @@ contract SudoOpenseaArbFast is Owned {
 
     Seaport constant seaport = Seaport(0x00000000000001ad428e4906aE43D8F9852d0dD6);
 
-    /// @custom:unsafe-as-fuck
     function executeArb(BasicOrderParameters calldata, uint256 paymentValue, address payable sudo_pool) public {
         assembly {
             let initialBalance := selfbalance()
