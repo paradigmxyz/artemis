@@ -108,7 +108,7 @@
     mstore                      // []
 
     0xa0                        // [nftids_ptr]
-    [ARG0_MEM_PTR]              // [mem_ptr, nftids_ptr
+    [ARG0_MEM_PTR]              // [mem_ptr, nftids_ptr]
     mstore                      // []
 
     0x00                        // [min_exected_token_output]

@@ -192,11 +192,45 @@ import {Owned} from "solmate/auth/Owned.sol";
 
 contract SudoOpenseaArbFast is Owned {
 
-    error NoProfit();
+    // Function and Error Selectors
+    uint256 constant fulfillBasicOrderSelector = 0xfb0f3ee1;
+    uint256 constant approveSelector = 0x095ea7b3;
+    uint256 constant swapNFTsForTokenSelector = 0xb1d3f1c1;
+    uint256 constant NoProfitSelector = 0xe39aafee;
+
+    // Memory Pointers
+    uint256 constant selectorMemPtr = 0x00;
+    uint256 constant argument0MemPtr = 0x20;
+    uint256 constant argument1MemPtr = 0x40;
+    uint256 constant argument2MemPtr = 0x60;
+    uint256 constant argument3MemPtr = 0x80;
+    uint256 constant argument4MemPtr = 0xa0;
+    uint256 constant argument5MemPtr = 0xc0;
+    uint256 constant argument6MemPtr = 0xe0;
+    uint256 constant callArumentsMemPtr = 0x1c;
+    uint256 constant errorMemPtr = 0x1c;
+    uint256 constant nftIdsMemPtr = 0xa0;
+    uint256 constant basicOrderParametersMemPtr = 0x20;
+
+    // Calldata Pointers
+    uint256 constant basicOrderParametersCdPtr = 0x64;
+    uint256 constant offerTokenCdPtr = 0x104;
+    uint256 constant offerIdentifierCdPtr = 0x124;
+    uint256 constant sudoPoolCdPtr = 0x44;
+
+    // Lengths
+    uint256 constant fulfillBasicOrderBaseLen = 0x24;
+    uint256 constant approveLen = 0x44;
+    uint256 constant swapNFTsForTokenLen = 0xe4;
+    uint256 constant wordLen = 0x20;
+    uint256 constant nftIdsLen = 0x01;
+
+    // Misc
+    uint256 constant zero = 0x00;
+
+    address constant seaport = 0x00000000000001ad428e4906aE43D8F9852d0dD6;
 
     constructor() Owned(msg.sender) {}
-
-    Seaport constant seaport = Seaport(0x00000000000001ad428e4906aE43D8F9852d0dD6);
 
     function executeArb(BasicOrderParameters calldata, uint256 paymentValue, address payable sudo_pool) public {
         assembly {
@@ -205,46 +239,62 @@ contract SudoOpenseaArbFast is Owned {
             let basicOrderLen := sub(calldatasize(), 0x64)
 
             // buy NFT on opensea
-            mstore(0x00, 0xfb0f3ee1)
-            mstore(0x20, 0x20)
-            calldatacopy(0x40, 0x64, basicOrderLen)
+            mstore(selectorMemPtr, fulfillBasicOrderSelector)
+            mstore(argument0MemPtr, basicOrderParametersMemPtr)
+            calldatacopy(argument1MemPtr, basicOrderParametersCdPtr, basicOrderLen)
             call_unwrap(
                 gas(),
-                0x1ad428e4906aE43D8F9852d0dD6,
+                seaport,
                 paymentValue,
-                0x1c,
-                add(basicOrderLen, 0x24),
-                0x00,
-                0x00
+                callArumentsMemPtr,
+                add(basicOrderLen, fulfillBasicOrderBaseLen),
+                zero,
+                zero
             )
 
             // set approval for sudo pool
-            mstore(0x00, 0x095ea7b3)
-            mstore(0x20, sudo_pool)
-            mstore(0x40, offerIdentifier)
-            call_unwrap(gas(), calldataload(0x104), 0x00, 0x1c, 0x44, 0x00, 0x00)
+            mstore(selectorMemPtr, approveSelector)
+            mstore(argument0MemPtr, sudo_pool)
+            mstore(argument1MemPtr, offerIdentifier)
+            call_unwrap(
+                gas(),
+                calldataload(offerTokenCdPtr),
+                zero,
+                callArumentsMemPtr,
+                approveLen,
+                zero,
+                zero
+            )
 
             // sell into pool
-            mstore(0x00, 0xb1d3f1c1)
-            mstore(0x20, 0xa0)
-            mstore(0x40, 0x00)
-            mstore(0x60, address())
-            mstore(0x80, 0x00)
-            mstore(0xa0, 0x00)
-            mstore(0xc0, 0x01)
-            mstore(0xe0, offerIdentifier)
-            call_unwrap(gas(), sudo_pool, 0x00, 0x1c, 0xe4, 0x00, 0x00)
+            mstore(selectorMemPtr, swapNFTsForTokenSelector)
+            mstore(argument0MemPtr, nftIdsMemPtr)
+            mstore(argument1MemPtr, zero)
+            mstore(argument2MemPtr, address())
+            mstore(argument3MemPtr, zero)
+            mstore(argument4MemPtr, zero)
+            mstore(argument5MemPtr, nftIdsLen)
+            mstore(argument6MemPtr, offerIdentifier)
+            call_unwrap(
+                gas(),
+                sudo_pool,
+                zero,
+                callArumentsMemPtr,
+                swapNFTsForTokenLen,
+                zero,
+                zero
+            )
 
             // revert if no profit
             if iszero(gt(selfbalance(), initialBalance)) {
-                mstore(0x00, 0xe39aafee)
-                revert(0x1c, 0x20)
+                mstore(zero, NoProfitSelector)
+                revert(errorMemPtr, wordLen)
             }
 
-            function call_unwrap(g, addr, val, argptr, arglen, retptr, retlen) {
-                if iszero(call(g, addr, val, argptr, arglen, retptr, retlen)) {
-                    returndatacopy(0x00, 0x00, returndatasize())
-                    revert(0x00, returndatasize())
+            function call_unwrap(g, addr, val, argMemPtr, arglen, retMemPtr, retlen) {
+                if iszero(call(g, addr, val, argMemPtr, arglen, retMemPtr, retlen)) {
+                    returndatacopy(zero, zero, returndatasize())
+                    revert(zero, returndatasize())
                 }
             }
         }
