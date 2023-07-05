@@ -9,6 +9,13 @@ use std::process::Command;
 
 use crate::init::{generate_constants, generate_lib, generate_strategy, generate_types};
 
+const SRC_DIR: &str = "src";
+const LIB_FILE: &str = "lib.rs";
+const CONSTANTS_FILE: &str = "constants.rs";
+const STRATEGY_FILE: &str = "strategy.rs";
+const TYPES_FILE: &str = "types.rs";
+const CARGO_FILE: &str = "Cargo.toml";
+
 #[derive(Debug, Clone, Parser)]
 pub struct StrategyParser {
     /// The root directory of the new project.
@@ -69,31 +76,31 @@ fn generate_crate<P: AsRef<Path>>(
     create_dir(&path)?;
 
     // Create src directory
-    let src_dir = path.join("src");
+    let src_dir = path.join(SRC_DIR);
     create_dir(&src_dir)?;
 
     // Generate lib.rs file
-    let lib_file = src_dir.join("lib.rs");
+    let lib_file = src_dir.join(LIB_FILE);
     let lib_code = lib.to_string();
     write_to_file(&lib_file, &lib_code)?;
 
     // Generate constants.rs file
-    let constants_file = src_dir.join("constants.rs");
+    let constants_file = src_dir.join(CONSTANTS_FILE);
     let constants_code = constants.to_string();
     write_to_file(&constants_file, &constants_code)?;
 
     // Generate strategy.rs file
-    let strategy_file = src_dir.join("strategy.rs");
+    let strategy_file = src_dir.join(STRATEGY_FILE);
     let strategy_code = strategy.to_string();
     write_to_file(&strategy_file, &strategy_code)?;
 
     // Generate types.rs file
-    let types_file = src_dir.join("types.rs");
+    let types_file = src_dir.join(TYPES_FILE);
     let types_code = types.to_string();
     write_to_file(&types_file, &types_code)?;
 
     // Generate Cargo.toml file
-    let cargo_toml_file = path.join("Cargo.toml");
+    let cargo_toml_file = path.join(CARGO_FILE);
     let cargo_toml_code = generate_cargo_toml_code(crate_name, &dependencies);
     write_to_file(&cargo_toml_file, &cargo_toml_code)?;
 
