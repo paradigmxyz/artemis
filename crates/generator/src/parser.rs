@@ -82,27 +82,27 @@ fn generate_crate<P: AsRef<Path>>(
     // Generate lib.rs file
     let lib_file = src_dir.join(LIB_FILE);
     let lib_code = lib.to_string();
-    write_to_file(&lib_file, &lib_code)?;
+    write_to_file(lib_file, &lib_code)?;
 
     // Generate constants.rs file
     let constants_file = src_dir.join(CONSTANTS_FILE);
     let constants_code = constants.to_string();
-    write_to_file(&constants_file, &constants_code)?;
+    write_to_file(constants_file, &constants_code)?;
 
     // Generate strategy.rs file
     let strategy_file = src_dir.join(STRATEGY_FILE);
     let strategy_code = strategy.to_string();
-    write_to_file(&strategy_file, &strategy_code)?;
+    write_to_file(strategy_file, &strategy_code)?;
 
     // Generate types.rs file
     let types_file = src_dir.join(TYPES_FILE);
     let types_code = types.to_string();
-    write_to_file(&types_file, &types_code)?;
+    write_to_file(types_file, &types_code)?;
 
     // Generate Cargo.toml file
     let cargo_toml_file = path.join(CARGO_FILE);
     let cargo_toml_code = generate_cargo_toml_code(crate_name, &dependencies);
-    write_to_file(&cargo_toml_file, &cargo_toml_code)?;
+    write_to_file(cargo_toml_file, &cargo_toml_code)?;
 
     // Format the generated code using rustfmt
     format_code(path)?;
