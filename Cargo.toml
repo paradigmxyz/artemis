@@ -8,7 +8,7 @@ members = [
     "crates/clients/*"
 ]
 
-default-members = ["bin/artemis"]
+default-members = ["bin/artemis", "bin/cli"]
 
 [profile.release]
 panic = 'abort'
