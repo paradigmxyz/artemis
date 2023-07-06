@@ -1,0 +1,172 @@
+//! # Sudo x Opensea Arbitrage Calls
+//!
+//! Contains call logic for the arbitrage contract.
+
+#include "./LibConst.huff"
+
+/// ## Call `Seaport.fulfillBasicOrder(BasicOrderParameters)`
+///
+/// ### Directives
+///
+/// 1. Store the selector in memory.
+/// 2. Store the BasicOrderParameters pointer in memory.
+/// 3. Copy the BasicOrderParameters directly from calldata into memory.
+/// 4. Schedule the stack for the call.
+/// 5. Call and bubble up if the call panics.
+///
+/// ### Panics
+///
+/// - When `CALL_AND_BUBBLE` panics.
+#define macro CALL_FULFILL_BASIC_ORDER() = takes (0) returns (0) {
+    [FULFILL_BASIC_SEL]     // [fulfill_selector]
+    [SEL_MEM_PTR]           // [mem_ptr, fulfill_selector]
+    mstore                  // []
+
+    [WORD_LEN]              // [basic_order_mem_ptr]
+    dup1                    // [arg0_mem_ptr, basic_order_mem_ptr]
+    mstore                  // []
+
+    [BASIC_ORDER_CD_PTR]    // [basic_order_cd_ptr]
+    calldatasize            // [calldatasize, basic_order_cd_ptr]
+    sub                     // [basic_order_len]
+    dup1                    // [basic_order_len, basic_order_len]
+    [BASIC_ORDER_CD_PTR]    // [basic_order_cd_ptr, basic_order_len, basic_order_len]
+    [ARG1_MEM_PTR]          // [arg1_mem_ptr, basic_order_cd_ptr, basic_order_len, basic_order_len]
+    calldatacopy            // [basic_order_len]
+
+    0x00 0x00               // [ret_len, ret_ptr, basic_order_len]
+    swap2                   // [basic_order_len, ret_ptr, ret_len]
+    [FULFILL_BASIC_LEN]     // [fulfill_basic_partial_len, basic_order_len, ret_ptr, ret_len]
+    add                     // [args_len, ret_ptr, ret_len]
+    [ARGS_MEM_PTR]          // [args_ptr, args_len, ret_ptr, ret_len]
+    [PAYMENT_VALUE_CD_PTR]  // [value_cd_ptr, args_ptr, args_len, ret_ptr, ret_len]
+    calldataload            // [value, args_ptr, args_len, ret_ptr, ret_len]
+    [SEAPORT]               // [seaport, value, args_ptr, args_len, ret_ptr, ret_len]
+    gas                     // [gas, seaport, value, args_ptr, args_len, ret_ptr, ret_len]
+    CALL_AND_BUBBLE()       // []
+}
+
+/// ## Call `ERC721.approve(address, uint256)`
+///
+/// ### Directives
+///
+/// 1. Store the selector in memory.
+/// 2. Store the sudo pool in memory.
+/// 3. Store the offer identifier (token id) in memory.
+/// 4. Schedule the stack for the call.
+/// 5. Call and bubble up if the call panics.
+///
+/// ### Panics
+///
+/// - When `CALL_AND_BUBBLE` panics.
+#define macro CALL_APPROVE() = takes (0) returns (0) {
+    [APPROVE_SEL]               // [approve_selector]
+    [SEL_MEM_PTR]               // [mem_ptr, approve_selector]
+    mstore                      // []
+
+    [SUDO_POOL_CD_PTR]          // [sudo_pool_cd_ptr]
+    calldataload                // [sudo_pool]
+    [ARG0_MEM_PTR]              // [mem_ptr, sudo_pool]
+    mstore                      // []
+
+    [OFFER_IDENTIFIER_CD_PTR]   // [offer_identifier_cd_ptr]
+    calldataload                // [offer_identifier]
+    [ARG1_MEM_PTR]              // [mem_ptr, offer_identifier]
+    mstore                      // []
+
+    0x00 0x00                   // [ret_ptr, ret_len]
+    [APPROVE_LEN]               // [args_len, ret_ptr, ret_len]
+    [ARGS_MEM_PTR]              // [args_ptr, args_len, ret_ptr, ret_len]
+    0x00                        // [value, args_ptr, args_len, ret_ptr, ret_len]
+    [OFFER_TOKEN_CD_PTR]        // [erc721_cd_ptr, value, args_ptr, args_len, ret_ptr, ret_len]
+    calldataload                // [erc721, value, args_ptr, args_len, ret_ptr, ret_len]
+    gas                         // [gas, erc721, value, args_ptr, args_len, ret_ptr, ret_len]
+    CALL_AND_BUBBLE()           // []
+}
+
+/// ## Call `LSSVMPairETH.swapNFTsForToken(uint256[], uint256, address, bool, address)`
+///
+/// ### Directives
+///
+/// 1. Store the selector in memory.
+/// 2. Store the NFT id array pointer in memory.
+/// 3. Store the minimum expected token output in memory.
+/// 4. Store the token recipient in memory.
+/// 5. Store the `isRouter` boolean in memory.
+/// 6. Store the router caller in memory.
+/// 7. Store the NFT id array length in memory.
+/// 8. Store the offer identifier (token id) in memory.
+/// 9. Schedule the stack for the call.
+/// 10. Call and bubble up if the call panics.
+///
+/// ### Panics
+///
+/// - When `CALL_AND_BUBBLE` panics.
+#define macro CALL_SWAP() = takes (0) returns (0) {
+    [SWAP_SEL]                  // [swap_selector]
+    [SEL_MEM_PTR]               // [mem_ptr, swap_selector]
+    mstore                      // []
+
+    0xa0                        // [nftids_ptr]
+    [ARG0_MEM_PTR]              // [mem_ptr, nftids_ptr]
+    mstore                      // []
+
+    0x00                        // [min_exected_token_output]
+    [ARG1_MEM_PTR]              // [mem_ptr, min_exected_token_output]
+    mstore                      // []
+
+    address                     // [token_recipient]
+    [ARG2_MEM_PTR]              // [mem_ptr, token_recipient]
+    mstore                      // []
+
+    0x00                        // [is_router]
+    [ARG3_MEM_PTR]              // [mem_ptr, is_router]
+    mstore                      // []
+
+    0x00                        // [router_caller]
+    [ARG4_MEM_PTR]              // [mem_ptr, router_caller]
+    mstore                      // []
+
+    0x01                        // [nftids_length]
+    [ARG5_MEM_PTR]              // [mem_ptr, nftids_length]
+    mstore                      // []
+
+    [OFFER_IDENTIFIER_CD_PTR]   // [offer_identifier_cd_ptr]
+    calldataload                // [offer_identifier]
+    [ARG6_MEM_PTR]              // [mem_ptr, offer_identifier]
+    mstore                      // []
+
+    0x00 0x00                   // [ret_ptr, ret_len]
+    [SWAP_LEN]                  // [args_len, ret_ptr, ret_len]
+    [ARGS_MEM_PTR]              // [args_ptr, args_len, ret_ptr, ret_len]
+    0x00                        // [value, args_ptr, args_len, ret_ptr, ret_len]
+    [SUDO_POOL_CD_PTR]          // [sudo_pool_cd_ptr, value, args_ptr, args_len, ret_ptr, ret_len]
+    calldataload                // [sudo_pool, value, args_ptr, args_len, ret_ptr, ret_len]
+    gas                         // [gas, sudo_pool, value, args_ptr, args_len, ret_ptr, ret_len]
+    CALL_AND_BUBBLE()           // []
+}
+
+/// ## Call and Conditionally Bubble Up
+///
+/// ### Directives
+///
+/// 1. Invokes the `call` opcode.
+/// 2. Jumps to end of macro if `call` returns `true`.
+/// 3. If `call` returned `false`, copy returndata to memory and revert with it.
+///
+/// ### Panics
+///
+/// - When `call` returns false.
+#define macro CALL_AND_BUBBLE() = takes (7) returns (0) {
+    // takes:           // [gas, target, value, args_ptr, args_len, ret_ptr, ret_len]
+    call                // [success]
+    is_success          // [is_success_dest, success]
+    jumpi               // []
+        returndatasize  // [ret_len]
+        0x00 0x00       // [mem_ptr, ret_ptr, ret_len]
+        returndatacopy  // []
+        returndatasize  // [ret_len]
+        0x00            // [ret_ptr, ret_len]
+        revert          // []
+    is_success:         // []
+}
