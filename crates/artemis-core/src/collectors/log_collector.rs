@@ -33,7 +33,7 @@ where
 {
     async fn get_event_stream(&self) -> Result<CollectorStream<'_, Log>> {
         let stream = self.provider.subscribe_logs(&self.filter).await?;
-        let stream = stream.filter_map(|log| Some( log ));
+        let stream = stream.filter_map(Some);
         Ok(Box::pin(stream))
     }
 }
