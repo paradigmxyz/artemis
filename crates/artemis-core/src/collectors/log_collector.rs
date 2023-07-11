@@ -4,26 +4,22 @@ use async_trait::async_trait;
 use ethers::{
     prelude::Middleware,
     providers::PubsubClient,
-    types::{Bytes, Filter, H256},
+    types::{Filter, Log},
 };
 use std::sync::Arc;
 use tokio_stream::StreamExt;
 
 /// A collector that listens for new blockchain event logs based on a [Filter](Filter),
-/// and generates a stream of [events](NewLog) which contain the indexed topics and data.
+/// and generates a stream of [events](NewLog) which contains the underlying [log](Log).
 pub struct LogCollector<M> {
     provider: Arc<M>,
     filter: Filter,
 }
 
-/// A new log event, containing up to four indexed topics and the data.
+/// A new log event, containing the underlying [log](Log).
 #[derive(Debug, Clone)]
 pub struct NewLog {
-    pub topic0: H256,
-    pub topic1: Option<H256>,
-    pub topic2: Option<H256>,
-    pub topic3: Option<H256>,
-    pub data: Bytes,
+    pub log: Log,
 }
 
 impl<M> LogCollector<M> {
@@ -44,42 +40,7 @@ where
     async fn get_event_stream(&self) -> Result<CollectorStream<'_, NewLog>> {
         let stream = self.provider.subscribe_logs(&self.filter).await?;
         let stream = stream.filter_map(|log| {
-            let topic0 = log.topics.get(0).copied();
-            let topic1 = log.topics.get(1).copied();
-            let topic2 = log.topics.get(2).copied();
-            let topic3 = log.topics.get(3).copied();
-            let data = log.data;
-            match (topic0, topic1, topic2, topic3) {
-                (Some(topic0), Some(topic1), Some(topic2), Some(topic3)) => Some(NewLog {
-                    topic0,
-                    topic1: Some(topic1),
-                    topic2: Some(topic2),
-                    topic3: Some(topic3),
-                    data,
-                }),
-                (Some(topic0), Some(topic1), Some(topic2), None) => Some(NewLog {
-                    topic0,
-                    topic1: Some(topic1),
-                    topic2: Some(topic2),
-                    topic3: None,
-                    data,
-                }),
-                (Some(topic0), Some(topic1), None, None) => Some(NewLog {
-                    topic0,
-                    topic1: Some(topic1),
-                    topic2: None,
-                    topic3: None,
-                    data,
-                }),
-                (Some(topic0), None, None, None) => Some(NewLog {
-                    topic0,
-                    topic1: None,
-                    topic2: None,
-                    topic3: None,
-                    data,
-                }),
-                _ => None,
-            }
+            Some(NewLog { log })
         });
         Ok(Box::pin(stream))
     }
