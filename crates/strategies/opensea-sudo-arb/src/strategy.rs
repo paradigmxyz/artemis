@@ -153,14 +153,20 @@ impl<M: Middleware + 'static> OpenseaSudoArb<M> {
 
     /// Process new block events, updating the internal state.
     async fn process_new_block_event(&mut self, event: NewBlock) -> Result<()> {
-        info!("processing new block {}", event.number);
+        info!("processing new block {}", event.block.number.unwrap());
         // Find new pools tthat were created in the last block.
         let new_pools = self
-            .get_new_pools(event.number.as_u64(), event.number.as_u64())
+            .get_new_pools(
+                event.block.number.unwrap().as_u64(),
+                event.block.number.unwrap().as_u64(),
+            )
             .await?;
         // Find existing pools that were touched in the last block.
         let touched_pools = self
-            .get_touched_pools(event.number.as_u64(), event.number.as_u64())
+            .get_touched_pools(
+                event.block.number.unwrap().as_u64(),
+                event.block.number.unwrap().as_u64(),
+            )
             .await?;
         // Get quotes for all new and touched pools and update state.
         let quotes = self
