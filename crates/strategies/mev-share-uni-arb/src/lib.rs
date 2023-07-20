@@ -1,10 +1,7 @@
-//! A strategy implementing atomic, cross-market NFT arbitrage between
-//! Seaport and Sudoswap. At a high level, we listen to a stream of new seaport orders,
-//! and compute whether we can atomically fulfill the order and sell the NFT into a
-//! sudoswap pool while making a profit.
-
-/// This module contains constants used by the strategy.
-pub mod constants;
+//! A strategy implementing probabilistic uniswap v3 / v2 arbitrage on MEV share. At a
+//! a high level, we listen to the stream of mev share events, and filter for trades
+//! that touch a v3 pool that we have a v2 pool for. We then submit a series of backruns
+//! of varying sizes, hoping that one of them will be profitable.
 
 /// This module contains the core strategy implementation.
 pub mod strategy;

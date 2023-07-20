@@ -5,14 +5,14 @@ use artemis_core::{
     collectors::mevshare_collector::MevShareCollector,
     engine::Engine,
     executors::mev_share_executor::MevshareExecutor,
-    types::{Collector, CollectorMap, ExecutorMap},
+    types::{CollectorMap, ExecutorMap},
 };
 use clap::Parser;
 use ethers::{
     prelude::MiddlewareBuilder,
-    providers::{Middleware, Provider, Ws},
+    providers::{Provider, Ws},
     signers::{LocalWallet, Signer},
-    types::{transaction::eip2718::TypedTransaction, Chain, TransactionRequest},
+    types::{Address, Chain},
 };
 use futures::StreamExt;
 use mev_share_uni_arb::{
@@ -34,13 +34,16 @@ pub struct Args {
     /// MEV share signer
     #[arg(long)]
     pub flashbots_signer: String,
+    /// Address of the arb contract.
+    #[arg(long)]
+    pub arb_contract_address: Address,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
     // Set up tracing and parse args.
     let filter = filter::Targets::new()
-        .with_target("opensea_sudo_arb", Level::INFO)
+        .with_target("mev_share_uni_arb", Level::INFO)
         .with_target("artemis_core", Level::INFO);
     tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer())
@@ -49,7 +52,7 @@ async fn main() -> Result<()> {
 
     let args = Args::parse();
 
-    //  Set up ethers provider.
+    //  Set up providers and signers.
     let ws = Ws::connect(args.wss).await?;
     let provider = Provider::new(ws);
 
@@ -57,23 +60,27 @@ async fn main() -> Result<()> {
     let address = wallet.address();
 
     let provider = Arc::new(provider.nonce_manager(address).with_signer(wallet.clone()));
-
-    // fb signer
     let fb_signer: LocalWallet = args.flashbots_signer.parse().unwrap();
 
     // Set up engine.
     let mut engine: Engine<Event, Action> = Engine::default();
 
+    // Set up collector.
     let mevshare_collector = Box::new(MevShareCollector::new(String::from(
         "https://mev-share.flashbots.net",
     )));
-    let mevshare_collector = CollectorMap::new(mevshare_collector, |e| Event::MEVShareEvent(e));
+    let mevshare_collector = CollectorMap::new(mevshare_collector, Event::MEVShareEvent);
     engine.add_collector(Box::new(mevshare_collector));
 
-    let strategy = MevShareUniArb::new(Arc::new(provider.clone()), wallet);
+    // Set up strategy.
+    let strategy = MevShareUniArb::new(
+        Arc::new(provider.clone()),
+        wallet,
+        args.arb_contract_address,
+    );
     engine.add_strategy(Box::new(strategy));
 
-    //set up executor
+    // Set up executor.
     let mev_share_executor = Box::new(MevshareExecutor::new(fb_signer, Chain::Mainnet));
     let mev_share_executor = ExecutorMap::new(mev_share_executor, |action| match action {
         Action::SubmitBundles(bundles) => Some(bundles),

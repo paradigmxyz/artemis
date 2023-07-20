@@ -1,10 +1,9 @@
 use artemis_core::{
-    collectors::{block_collector::NewBlock, opensea_order_collector::OpenseaOrder},
-    executors::{mempool_executor::SubmitTxToMempool, mev_share_executor::Bundles},
+    executors::{mev_share_executor::Bundles},
 };
-use ethers::types::{Chain, H160, H256};
+use ethers::types::{H160};
 
-use mev_share_rs::{sse, EventClient};
+use mev_share_rs::{sse};
 
 /// Core Event enum for the current strategy.
 #[derive(Debug, Clone)]
