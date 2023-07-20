@@ -3,33 +3,49 @@ use anyhow::Result;
 use async_trait::async_trait;
 use ethers::{signers::Signer, types::Chain};
 use futures::{stream, StreamExt};
-use matchmaker::{client::Client, types::BundleRequest};
+use jsonrpsee::http_client::{transport::Error as HttpError, HttpClient, HttpClientBuilder};
+use mev_share::rpc::{FlashbotsSignerLayer, MevApiClient, SendBundleRequest};
+use tower::ServiceBuilder;
 use tracing::{error, info};
 
 /// An executor that sends bundles to the MEV-share Matchmaker.
-pub struct MevshareExecutor<S> {
-    matchmaker_client: Client<S>,
+pub struct MevshareExecutor {
+    mev_share_client: AuthedClient,
 }
 
-/// List of bundles to send to the Matchmaker.
-pub type Bundles = Vec<BundleRequest>;
+// what type should this actually be?
+type AuthedClient = HttpClient;
 
-impl<S: Signer + Clone + 'static> MevshareExecutor<S> {
-    pub fn new(signer: S, chain: Chain) -> Self {
+impl MevshareExecutor {
+    pub fn new<S: Signer + Clone + 'static>(signer: S, chain: Chain) -> Self {
+        // Set up flashbots-style auth middleware
+        let signing_middleware = FlashbotsSignerLayer::new(signer);
+        let service_builder = ServiceBuilder::new()
+            // map signer errors to http errors
+            .map_err(|e| HttpError::Http(e))
+            .layer(signing_middleware);
+
+        // Set up the rpc client
+        let url = "https://relay.flashbots.net:443";
+        let client = HttpClientBuilder::default()
+            .set_middleware(service_builder)
+            .build(url)
+            .expect("Failed to create http client");
+
         Self {
-            matchmaker_client: Client::new(signer, chain),
+            mev_share_client: client,
         }
     }
 }
 
 #[async_trait]
-impl<S: Signer + Clone + 'static> Executor<Bundles> for MevshareExecutor<S> {
+impl Executor<Vec<SendBundleRequest>> for MevshareExecutor {
     /// Send bundles to the matchmaker.
-    async fn execute(&self, action: Bundles) -> Result<()> {
+    async fn execute(&self, action: Vec<SendBundleRequest>) -> Result<()> {
         let bodies = stream::iter(action)
             .map(|bundle| {
-                let client = &self.matchmaker_client;
-                async move { client.send_bundle(&bundle).await }
+                let client = &self.mev_share_client;
+                async move { client.send_bundle(bundle).await }
             })
             .buffer_unordered(5);
 

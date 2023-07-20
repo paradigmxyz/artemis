@@ -7,7 +7,7 @@ edition = "2021"
 
 ## eth
 artemis-core = { path = "../../artemis-core" }
-ethers = { version = "2", features = ["ws", "rustls"]}
+ethers.workspace = true
 bindings = { path = "./bindings" }
 opensea-stream = { git = "https://github.com/FrankieIsLost/opensea-stream-rs"}
 opensea-v2 = { path = "../../clients/opensea-v2" }

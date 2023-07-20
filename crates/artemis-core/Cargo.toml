@@ -8,10 +8,9 @@ edition = "2021"
 [dependencies]
 
 ## eth
-ethers = { version = "2", features = ["ws", "rustls"]}
+ethers.workspace = true
 opensea-stream = { git = "https://github.com/FrankieIsLost/opensea-stream-rs"}
-mev-share-sse = { git = "https://github.com/mattsse/mev-share-rs" }
-matchmaker = { path = "../../crates/clients/matchmaker" }
+mev-share = "0.1.1"
 ethers-flashbots = { git = "https://github.com/FrankieIsLost/ethers-flashbots", features = ["rustls"] }
 
 ## async
@@ -20,8 +19,10 @@ futures = "0.3"
 reqwest = { version = "0.11.14", default-features = false, features = ["rustls-tls"] }
 tokio = { version = "1.18", features = ["full"] }
 tokio-stream = { version = "0.1", features = ['sync'] }
+jsonrpsee = { version = "0.18", features = ["client", "async-client"] }
 
 ## misc
 anyhow = "1.0.70"
 thiserror = "1.0.40"
 tracing = "0.1.37"
+tower = "0.4.13"
