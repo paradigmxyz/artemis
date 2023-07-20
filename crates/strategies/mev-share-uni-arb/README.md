@@ -1,31 +1,21 @@
-# Opensea Sudo Arb
+# MEV Share Uniswap V2 / V3 Arbitrage
 
-A strategy implementing atomic, cross-market NFT arbitrage between Seaport and Sudoswap. At a high level, we listen to a stream of new seaport orders, and compute whether we can atomically fulfill the order and sell the NFT into a sudoswap pool while making a profit. 
+A strategy implementing probabilistic Uniswap V2 / V3 arbitrage on Mev Share. At a high level, we listen to the stream of mev share events, and filter for trades that touch a v3 pool. We then submit a series of backruns of varying sizes, hoping that one of them will be profitable.
 
 ## Strategy 
 
 ### Sync
 
-The strategy first syncs its initial state, by rebuilding the state of all Sudoswap pools in memory. We do this as follows: 
-
-1. Starting from the Sudoswap factory deployment block, filter for all `NewPair` events emitted to build a full list of pools.
-2. We batch read quotes for all pools by using a specialized quoter contract  via eth_call bytecode injection.
-3. We update the state of a pair of HashMaps in memory for fast retrival of each NFT collection's best quote. 
+The strategy first syncs its initial state, by loading the set of valid pools into memory. These are pools where one asset in the pair is WETH, and which exist on both uniswap v2 and v3. 
 
 ### Processing
 
-After the initial sync is done, we stream the following events: 
+After the initial sync is done, we stream MEV-Share events, listening for transactions that touch one of the revelant pools. When we find these transactions, we submit a series of backruns, blindly guessing the trade size.  
 
-1. New Blocks: for every new block, we find all sudo pools that were either touched or created, and update their internal state in memory after getting new quotes. 
-2. Seaport orders: we stream seaport orders, filtering for sell orders on the collections which have valid sudo quotes. We compute whether an arb is available, and if so, submit a transaction to our atomic arb contract. 
 
 ## Contracts 
 
-This strategy relies on two contracts:
-
-1. [`SudoOpenseaArb`](/crates/strategies/opensea-sudo-arb/contracts/src/SudoOpenseaArb.sol): Execute an atomic arb by buying an NFT on seaport by calling `fulfillBasicOrder`, and selling it on Sudoswap by calling `swapNFTsForToken`.
-
-2. [`SudoPairQuoter`](/crates/strategies/opensea-sudo-arb/contracts/src/SudoPairQuoter.sol): Batch read contract that checks whether sudo pools have valid quotes. 
+This strategy relies on an atomic arb contract which can be found [here](./contracts/src/BlindArb.sol)
 
 ## Build and Test 
 
