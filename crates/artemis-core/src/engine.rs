@@ -16,6 +16,12 @@ pub struct Engine<E, A> {
 
     /// The set of executors that the engine will use to execute actions.
     executors: Vec<Box<dyn Executor<A>>>,
+
+    /// The capacity of the event channel.
+    event_channel_capacity: usize,
+
+    /// The capacity of the action channel.
+    action_channel_capacity: usize,
 }
 
 impl<E, A> Engine<E, A> {
@@ -24,7 +30,19 @@ impl<E, A> Engine<E, A> {
             collectors: vec![],
             strategies: vec![],
             executors: vec![],
+            event_channel_capacity: 512,
+            action_channel_capacity: 512,
         }
+    }
+
+    pub fn with_event_channel_capacity(mut self, capacity: usize) -> Self {
+        self.event_channel_capacity = capacity;
+        self
+    }
+
+    pub fn with_action_channel_capacity(mut self, capacity: usize) -> Self {
+        self.action_channel_capacity = capacity;
+        self
     }
 }
 
@@ -58,8 +76,8 @@ where
     /// each collector, strategy, and executor. It will then orchestrate the
     /// data flow between them.
     pub async fn run(self) -> Result<JoinSet<()>, Box<dyn std::error::Error>> {
-        let (event_sender, _): (Sender<E>, _) = broadcast::channel(512);
-        let (action_sender, _): (Sender<A>, _) = broadcast::channel(512);
+        let (event_sender, _): (Sender<E>, _) = broadcast::channel(self.event_channel_capacity);
+        let (action_sender, _): (Sender<A>, _) = broadcast::channel(self.action_channel_capacity);
 
         let mut set = JoinSet::new();
 

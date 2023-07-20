@@ -1,7 +1,8 @@
 use crate::types::{Collector, CollectorStream};
 use anyhow::Result;
 use async_trait::async_trait;
-use mev_share_rs::{sse::Event, EventClient};
+pub use mev_share_sse::Event;
+use mev_share_sse::EventClient;
 use tokio_stream::StreamExt;
 
 /// A collector that streams from MEV-Share SSE endpoint
@@ -22,7 +23,7 @@ impl MevShareCollector {
 impl Collector<Event> for MevShareCollector {
     async fn get_event_stream(&self) -> Result<CollectorStream<'_, Event>> {
         let client = EventClient::default();
-        let stream = client.subscribe(&self.mevshare_sse_url).await.unwrap();
+        let stream = client.events(&self.mevshare_sse_url).await.unwrap();
         let stream = stream.filter_map(|event| match event {
             Ok(evt) => Some(evt),
             Err(_) => None,
