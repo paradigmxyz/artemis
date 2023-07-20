@@ -10,7 +10,7 @@ edition = "2021"
 ## eth
 ethers = { version = "2", features = ["ws", "rustls"]}
 opensea-stream = { git = "https://github.com/FrankieIsLost/opensea-stream-rs"}
-mev-share-rs = { git = "https://github.com/mattsse/mev-share-rs", commit = "bccab1f" }
+mev-share = "0.1.1"
 matchmaker = { path = "../../crates/clients/matchmaker" }
 ethers-flashbots = { git = "https://github.com/FrankieIsLost/ethers-flashbots", features = ["rustls"] }
 

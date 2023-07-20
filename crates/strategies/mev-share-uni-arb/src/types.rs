@@ -3,7 +3,7 @@ use artemis_core::{
 };
 use ethers::types::H160;
 
-use mev_share_rs::sse;
+use mev_share::sse;
 
 /// Core Event enum for the current strategy.
 #[derive(Debug, Clone)]
