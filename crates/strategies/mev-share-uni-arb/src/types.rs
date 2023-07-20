@@ -1,9 +1,9 @@
 use artemis_core::{
-    executors::{mev_share_executor::Bundles},
+    executors::mev_share_executor::Bundles,
 };
-use ethers::types::{H160};
+use ethers::types::H160;
 
-use mev_share_rs::{sse};
+use mev_share_rs::sse;
 
 /// Core Event enum for the current strategy.
 #[derive(Debug, Clone)]
