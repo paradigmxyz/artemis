@@ -1,6 +1,4 @@
-use artemis_core::{
-    executors::mev_share_executor::Bundles,
-};
+use artemis_core::executors::mev_share_executor::Bundles;
 use ethers::types::H160;
 
 use mev_share::sse;

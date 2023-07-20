@@ -1,7 +1,7 @@
 use crate::types::{Collector, CollectorStream};
 use anyhow::Result;
 use async_trait::async_trait;
-use mev_share::sse::{EventClient, Event};
+use mev_share::sse::{Event, EventClient};
 use tokio_stream::StreamExt;
 
 /// A collector that streams from MEV-Share SSE endpoint

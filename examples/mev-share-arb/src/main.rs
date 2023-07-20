@@ -14,7 +14,6 @@ use ethers::{
     signers::{LocalWallet, Signer},
     types::{Address, Chain},
 };
-use futures::StreamExt;
 use mev_share_uni_arb::{
     strategy::MevShareUniArb,
     types::{Action, Event},
