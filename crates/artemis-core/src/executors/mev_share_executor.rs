@@ -3,11 +3,14 @@ use std::error::Error;
 use crate::types::Executor;
 use anyhow::Result;
 use async_trait::async_trait;
-use ethers::{signers::Signer, types::Chain};
+use ethers::{signers::Signer};
 use futures::{stream, StreamExt};
-use jsonrpsee::http_client::{transport::{Error as HttpError, HttpBackend}, HttpClient, HttpClientBuilder};
-use mev_share::rpc::{FlashbotsSignerLayer, MevApiClient, SendBundleRequest, FlashbotsSigner};
-use tower::{ServiceBuilder, util::MapErr};
+use jsonrpsee::http_client::{
+    transport::{Error as HttpError, HttpBackend},
+    HttpClient, HttpClientBuilder,
+};
+use mev_share::rpc::{FlashbotsSigner, FlashbotsSignerLayer, MevApiClient, SendBundleRequest};
+use tower::{util::MapErr, ServiceBuilder};
 use tracing::{error, info};
 
 /// An executor that sends bundles to the MEV-share Matchmaker.
@@ -15,13 +18,11 @@ pub struct MevshareExecutor<S> {
     mev_share_client: AuthedClient<S>,
 }
 
-
 type MapErrorFn = fn(Box<dyn Error + Send + Sync + 'static>) -> HttpError;
 type AuthedClient<S> = HttpClient<MapErr<FlashbotsSigner<S, HttpBackend>, MapErrorFn>>;
 
-
 impl<S: Signer + Clone + 'static> MevshareExecutor<S> {
-    pub fn new(signer: S, chain: Chain) -> Self {
+    pub fn new(signer: S) -> Self {
         // Set up flashbots-style auth middleware
         let signing_middleware = FlashbotsSignerLayer::new(signer);
         let service_builder = ServiceBuilder::new()
@@ -44,7 +45,6 @@ impl<S: Signer + Clone + 'static> MevshareExecutor<S> {
     pub fn map_box_to_http_error(err: Box<dyn Error + Send + Sync>) -> HttpError {
         HttpError::Http(err)
     }
-
 }
 
 #[async_trait]
