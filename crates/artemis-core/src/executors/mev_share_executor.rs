@@ -1,28 +1,32 @@
+use std::error::Error;
+
 use crate::types::Executor;
 use anyhow::Result;
 use async_trait::async_trait;
 use ethers::{signers::Signer, types::Chain};
 use futures::{stream, StreamExt};
-use jsonrpsee::http_client::{transport::Error as HttpError, HttpClient, HttpClientBuilder};
-use mev_share::rpc::{FlashbotsSignerLayer, MevApiClient, SendBundleRequest};
-use tower::ServiceBuilder;
+use jsonrpsee::http_client::{transport::{Error as HttpError, HttpBackend}, HttpClient, HttpClientBuilder};
+use mev_share::rpc::{FlashbotsSignerLayer, MevApiClient, SendBundleRequest, FlashbotsSigner};
+use tower::{ServiceBuilder, util::MapErr};
 use tracing::{error, info};
 
 /// An executor that sends bundles to the MEV-share Matchmaker.
-pub struct MevshareExecutor {
-    mev_share_client: AuthedClient,
+pub struct MevshareExecutor<S> {
+    mev_share_client: AuthedClient<S>,
 }
 
-// what type should this actually be?
-type AuthedClient = HttpClient;
 
-impl MevshareExecutor {
-    pub fn new<S: Signer + Clone + 'static>(signer: S, chain: Chain) -> Self {
+type MapErrorFn = fn(Box<dyn Error + Send + Sync + 'static>) -> HttpError;
+type AuthedClient<S> = HttpClient<MapErr<FlashbotsSigner<S, HttpBackend>, MapErrorFn>>;
+
+
+impl<S: Signer + Clone + 'static> MevshareExecutor<S> {
+    pub fn new(signer: S, chain: Chain) -> Self {
         // Set up flashbots-style auth middleware
         let signing_middleware = FlashbotsSignerLayer::new(signer);
         let service_builder = ServiceBuilder::new()
             // map signer errors to http errors
-            .map_err(|e| HttpError::Http(e))
+            .map_err(Self::map_box_to_http_error as MapErrorFn)
             .layer(signing_middleware);
 
         // Set up the rpc client
@@ -36,10 +40,15 @@ impl MevshareExecutor {
             mev_share_client: client,
         }
     }
+
+    pub fn map_box_to_http_error(err: Box<dyn Error + Send + Sync>) -> HttpError {
+        HttpError::Http(err)
+    }
+
 }
 
 #[async_trait]
-impl Executor<Vec<SendBundleRequest>> for MevshareExecutor {
+impl<S: Signer + Clone + 'static> Executor<Vec<SendBundleRequest>> for MevshareExecutor<S> {
     /// Send bundles to the matchmaker.
     async fn execute(&self, action: Vec<SendBundleRequest>) -> Result<()> {
         let bodies = stream::iter(action)
