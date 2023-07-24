@@ -1,7 +1,6 @@
-use artemis_core::executors::mev_share_executor::Bundles;
 use ethers::types::H160;
 
-use mev_share::sse;
+use mev_share::{rpc::SendBundleRequest, sse};
 
 /// Core Event enum for the current strategy.
 #[derive(Debug, Clone)]
@@ -12,7 +11,7 @@ pub enum Event {
 /// Core Action enum for the current strategy.
 #[derive(Debug, Clone)]
 pub enum Action {
-    SubmitBundles(Bundles),
+    SubmitBundles(Vec<SendBundleRequest>),
 }
 
 #[derive(Debug, serde::Deserialize)]
