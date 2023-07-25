@@ -10,7 +10,7 @@ edition = "2021"
 ## eth
 ethers.workspace = true
 opensea-stream = { git = "https://github.com/FrankieIsLost/opensea-stream-rs"}
-mev-share = "0.1.1"
+mev-share = "0.1.2"
 ethers-flashbots = { git = "https://github.com/FrankieIsLost/ethers-flashbots", features = ["rustls"] }
 
 ## async

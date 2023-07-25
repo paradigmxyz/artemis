@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 ethers = { version = "2", features = ["ws", "rustls"]}
 tokio = { version = "1.18", features = ["full"] }
-mev-share = "0.1.1"
+mev-share = "0.1.2"
 async-trait = "0.1.64"
 artemis-core = { path = "../../artemis-core" }
 anyhow = "1.0.70"
