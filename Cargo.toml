@@ -11,6 +11,12 @@ members = [
 
 default-members = ["bin/artemis", "bin/cli"]
 
+[workspace.dependencies]
+## eth
+ethers = { version = "2", features = ["ws", "rustls"]}
+ethers-signers = "2.0"
+
+
 [profile.release]
 panic = 'abort'
 

@@ -9,11 +9,11 @@ use anyhow::Result;
 use artemis_core::types::Strategy;
 
 use ethers::signers::Signer;
-use matchmaker::types::{BundleRequest, BundleTx};
 
 use ethers::providers::Middleware;
 use ethers::types::{Address, H256};
 use ethers::types::{H160, U256};
+use mev_share::rpc::{BundleItem, Inclusion, SendBundleRequest};
 use tracing::info;
 
 use crate::types::V2V3PoolRecord;
@@ -110,7 +110,11 @@ impl<M: Middleware + 'static, S: Signer + 'static> Strategy<Event, Action>
 
 impl<M: Middleware + 'static, S: Signer + 'static> MevShareUniArb<M, S> {
     /// Generate a series of bundles of varying sizes to submit to the matchmaker.
-    pub async fn generate_bundles(&self, v3_address: H160, tx_hash: H256) -> Vec<BundleRequest> {
+    pub async fn generate_bundles(
+        &self,
+        v3_address: H160,
+        tx_hash: H256,
+    ) -> Vec<SendBundleRequest> {
         let mut bundles = Vec::new();
         let v2_info = self.pool_map.get(&v3_address).unwrap();
 
@@ -184,14 +188,21 @@ impl<M: Middleware + 'static, S: Signer + 'static> MevShareUniArb<M, S> {
             let signature = self.tx_signer.sign_transaction(&arb_tx).await.unwrap();
             let bytes = arb_tx.rlp_signed(&signature);
             let txs = vec![
-                BundleTx::TxHash { hash: tx_hash },
-                BundleTx::Tx {
+                BundleItem::Hash { hash: tx_hash },
+                BundleItem::Tx {
                     tx: bytes,
                     can_revert: false,
                 },
             ];
-            // bundle should be valid for next block
-            let bundle = BundleRequest::make_simple(block_num.add(1), txs);
+            let bundle = SendBundleRequest {
+                bundle_body: txs,
+                inclusion: Inclusion {
+                    block: block_num.add(1),
+                    // set a large validity window to ensure builder gets a chance to include bundle.
+                    max_block: Some(block_num.add(30)),
+                },
+                ..Default::default()
+            };
             info!("submitting bundle: {:?}", bundle);
             bundles.push(bundle);
         }

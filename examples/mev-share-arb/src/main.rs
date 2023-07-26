@@ -12,7 +12,7 @@ use ethers::{
     prelude::MiddlewareBuilder,
     providers::{Provider, Ws},
     signers::{LocalWallet, Signer},
-    types::{Address, Chain},
+    types::Address,
 };
 use mev_share_uni_arb::{
     strategy::MevShareUniArb,
@@ -80,7 +80,7 @@ async fn main() -> Result<()> {
     engine.add_strategy(Box::new(strategy));
 
     // Set up executor.
-    let mev_share_executor = Box::new(MevshareExecutor::new(fb_signer, Chain::Mainnet));
+    let mev_share_executor = Box::new(MevshareExecutor::new(fb_signer));
     let mev_share_executor = ExecutorMap::new(mev_share_executor, |action| match action {
         Action::SubmitBundles(bundles) => Some(bundles),
     });
