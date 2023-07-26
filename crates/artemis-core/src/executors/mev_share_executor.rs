@@ -1,12 +1,11 @@
-
-
 use crate::types::Executor;
 use anyhow::Result;
 use async_trait::async_trait;
 use ethers::signers::Signer;
 use futures::{stream, StreamExt};
 use jsonrpsee::http_client::{
-    transport::{self}, HttpClientBuilder,
+    transport::{self},
+    HttpClientBuilder,
 };
 use mev_share::rpc::{FlashbotsSignerLayer, MevApiClient, SendBundleRequest};
 
