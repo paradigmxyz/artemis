@@ -2525,9 +2525,9 @@ dependencies = [
 
 [[package]]
 name = "mev-share"
-version = "0.1.2"
+version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c77693bfadd573d1891633e85f53ff4cdc2eda8a385650810df34bd2f05d78c9"
+checksum = "4fece94bf7e46e4fc8362bda9c1b85bd219c84a64c256c324549bb4270f06749"
 dependencies = [
  "mev-share-rpc-api",
  "mev-share-sse",
@@ -2559,10 +2559,11 @@ dependencies = [
 
 [[package]]
 name = "mev-share-rpc-api"
-version = "0.1.2"
+version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7808334192e954edff842264ea40768021e073d9b55b8031af68760eeafa1e85"
+checksum = "00763a91130b3fa531f22be8ae4e29abaa0b7dba4dd6d9fa3576d6d101772617"
 dependencies = [
+ "async-trait",
  "ethers-core",
  "ethers-signers",
  "futures-util",
@@ -2575,9 +2576,9 @@ dependencies = [
 
 [[package]]
 name = "mev-share-sse"
-version = "0.1.2"
+version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72afe2e0849813a69a65db1f405983196d1c174e97c02c94671ea9a61ce699cc"
+checksum = "40b5f79e933e618871a2c4fc093f4e688f3077502cadef58e1acb34bf86ac424"
 dependencies = [
  "async-sse",
  "bytes",
