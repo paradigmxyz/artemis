@@ -82,7 +82,7 @@ async fn main() -> Result<()> {
     // Set up executor.
     let mev_share_executor = Box::new(MevshareExecutor::new(fb_signer));
     let mev_share_executor = ExecutorMap::new(mev_share_executor, |action| match action {
-        Action::SubmitBundles(bundles) => Some(bundles),
+        Action::SubmitBundle(bundle) => Some(bundle),
     });
     engine.add_executor(Box::new(mev_share_executor));
 
