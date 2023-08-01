@@ -101,9 +101,10 @@ impl<M: Middleware + 'static, S: Signer + 'static> Strategy<Event, Action>
                     "Found a v3 pool match at address {:?}, submitting bundles",
                     address
                 );
-                self.generate_bundles(address, event.hash).await
+                self.generate_bundles(address, event.hash)
+                    .await
                     .into_iter()
-                    .map(|bundle| Action::SubmitBundle(bundle))
+                    .map(Action::SubmitBundle)
                     .collect()
             }
         }
