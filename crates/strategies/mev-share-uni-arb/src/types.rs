@@ -11,7 +11,7 @@ pub enum Event {
 /// Core Action enum for the current strategy.
 #[derive(Debug, Clone)]
 pub enum Action {
-    SubmitBundles(Vec<SendBundleRequest>),
+    SubmitBundle(SendBundleRequest),
 }
 
 #[derive(Debug, serde::Deserialize)]

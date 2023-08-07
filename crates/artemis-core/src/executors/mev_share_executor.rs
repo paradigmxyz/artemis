@@ -2,7 +2,6 @@ use crate::types::Executor;
 use anyhow::Result;
 use async_trait::async_trait;
 use ethers::signers::Signer;
-use futures::{stream, StreamExt};
 use jsonrpsee::http_client::{
     transport::{self},
     HttpClientBuilder,
@@ -34,24 +33,14 @@ impl MevshareExecutor {
 }
 
 #[async_trait]
-impl Executor<Vec<SendBundleRequest>> for MevshareExecutor {
+impl Executor<SendBundleRequest> for MevshareExecutor {
     /// Send bundles to the matchmaker.
-    async fn execute(&self, action: Vec<SendBundleRequest>) -> Result<()> {
-        let bodies = stream::iter(action)
-            .map(|bundle| {
-                let client = &self.mev_share_client;
-                async move { client.send_bundle(bundle).await }
-            })
-            .buffer_unordered(5);
-
-        bodies
-            .for_each(|b| async {
-                match b {
-                    Ok(b) => info!("Bundle response: {:?}", b),
-                    Err(e) => error!("Bundle error: {}", e),
-                }
-            })
-            .await;
+    async fn execute(&self, action: SendBundleRequest) -> Result<()> {
+        let body = self.mev_share_client.send_bundle(action).await;
+        match body {
+            Ok(body) => info!("Bundle response: {:?}", body),
+            Err(e) => error!("Bundle error: {}", e),
+        };
         Ok(())
     }
 }

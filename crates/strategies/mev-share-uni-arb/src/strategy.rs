@@ -83,26 +83,29 @@ impl<M: Middleware + 'static, S: Signer + 'static> Strategy<Event, Action>
     }
 
     // Process incoming events, seeing if we can arb new orders.
-    async fn process_event(&mut self, event: Event) -> Option<Action> {
+    async fn process_event(&mut self, event: Event) -> Vec<Action> {
         match event {
             Event::MEVShareEvent(event) => {
                 info!("Received mev share event: {:?}", event);
                 // skip if event has no logs
                 if event.logs.is_empty() {
-                    return None;
+                    return vec![];
                 }
                 let address = event.logs[0].address;
                 // skip if address is not a v3 pool
                 if !self.pool_map.contains_key(&address) {
-                    return None;
+                    return vec![];
                 }
                 // if it's a v3 pool we care about, submit bundles
                 info!(
                     "Found a v3 pool match at address {:?}, submitting bundles",
                     address
                 );
-                let bundles = self.generate_bundles(address, event.hash).await;
-                return Some(Action::SubmitBundles(bundles));
+                self.generate_bundles(address, event.hash)
+                    .await
+                    .into_iter()
+                    .map(Action::SubmitBundle)
+                    .collect()
             }
         }
     }

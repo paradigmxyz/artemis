@@ -109,7 +109,7 @@ where
                 loop {
                     match event_receiver.recv().await {
                         Ok(event) => {
-                            if let Some(action) = strategy.process_event(event).await {
+                            for action in strategy.process_event(event).await {
                                 match action_sender.send(action) {
                                     Ok(_) => {}
                                     Err(e) => error!("error sending action: {}", e),

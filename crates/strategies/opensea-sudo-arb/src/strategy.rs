@@ -105,11 +105,14 @@ impl<M: Middleware + 'static> Strategy<Event, Action> for OpenseaSudoArb<M> {
     }
 
     // Process incoming events, seeing if we can arb new orders, and updating the internal state on new blocks.
-    async fn process_event(&mut self, event: Event) -> Option<Action> {
+    async fn process_event(&mut self, event: Event) -> Vec<Action> {
         match event {
-            Event::OpenseaOrder(order) => self.process_order_event(*order).await,
+            Event::OpenseaOrder(order) => self
+                .process_order_event(*order)
+                .await
+                .map_or(vec![], |a| vec![a]),
             Event::NewBlock(block) => match self.process_new_block_event(block).await {
-                Ok(_) => None,
+                Ok(_) => vec![],
                 Err(e) => {
                     panic!("Strategy is out of sync {}", e);
                 }
@@ -217,7 +220,7 @@ impl<M: Middleware + 'static> OpenseaSudoArb<M> {
         let quotes = self.quoter.get_multiple_sell_quotes(pools.clone()).await?;
         let res = pools
             .into_iter()
-            .zip(quotes.into_iter())
+            .zip(quotes)
             .collect::<Vec<(H160, SellQuote)>>();
         Ok(res)
     }
