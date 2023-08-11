@@ -25,7 +25,9 @@ pub trait Collector<E>: Send + Sync {
 pub trait Strategy<E, A>: Send + Sync {
     /// Sync the initial state of the strategy if needed, usually by fetching
     /// onchain data.
-    async fn sync_state(&mut self) -> Result<()>;
+    async fn sync_state(&mut self) -> Result<()> {
+        Ok(())
+    }
 
     /// Process an event, and return an action if needed.
     async fn process_event(&mut self, event: E) -> Vec<A>;
