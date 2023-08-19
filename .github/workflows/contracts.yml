@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - id: set-matrix
-        run: echo "::set-output name=matrix::$(ls ./crates/strategies | jq -R -s -c 'split("\n")[:-1]')"
+        run: echo "matrix=$(ls ./crates/strategies | jq -R -s -c 'split("\n")[:-1]')" >> "$GITHUB_OUTPUT"
 
   # Matrix across all discovered strategies
   tests:
