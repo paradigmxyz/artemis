@@ -1,0 +1,16 @@
+[package]
+name = "fiber-artemis"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+artemis-core = { path = "../../artemis-core" }
+ethers = {  version = "2", features = ["ws", "rustls"] }
+fiber = { version = "0.3.3", git = "https://github.com/chainbound/fiber-rs" }
+serde_json = { version = "1.0", features = ["arbitrary_precision"] }
+tokio = { version = "1.18", features = ["full"] }
+async-trait = "0.1.64"
+serde = "1.0.152"
+anyhow = "1.0.70"
+futures = "0.3"
