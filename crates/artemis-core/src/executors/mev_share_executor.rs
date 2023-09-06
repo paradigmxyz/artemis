@@ -30,6 +30,20 @@ impl MevshareExecutor {
             mev_share_client: Box::new(http),
         }
     }
+    pub fn new_with_relay(signer: impl Signer + Clone + 'static, relay: &str) -> Self {
+        // Set up flashbots-style auth middleware
+        let http = HttpClientBuilder::default()
+            .set_middleware(
+                tower::ServiceBuilder::new()
+                    .map_err(transport::Error::Http)
+                    .layer(FlashbotsSignerLayer::new(signer)),
+            )
+            .build(relay)
+            .expect("failed to build HTTP client");
+        Self {
+            mev_share_client: Box::new(http),
+        }
+    }
 }
 
 #[async_trait]
