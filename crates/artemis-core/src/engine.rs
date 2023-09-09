@@ -92,7 +92,10 @@ where
                             Ok(_) => {}
                             Err(e) => error!("error executing action: {}", e),
                         },
-                        Err(e) => error!("error receiving action: {}", e),
+                        Err(e) => {
+                            error!("error receiving action: {}", e);
+                            break;
+                        }
                     }
                 }
             });
@@ -116,7 +119,10 @@ where
                                 }
                             }
                         }
-                        Err(e) => error!("error receiving event: {}", e),
+                        Err(e) => {
+                            error!("error receiving event: {}", e);
+                            break;
+                        }
                     }
                 }
             });
