@@ -1,0 +1,92 @@
+//! # Sudo x Opensea Arbitrage Constants
+//!
+//! Contains constants for the arbitrage contract.
+
+// -------------------------------------------------------------------------------------------------
+// SELECTORS
+
+/// ## Selector for `self.executeArb(BasicOrderParameters calldata, uint256, address)`
+#define constant EXECUTE_ARB_SEL = 0x650dc8e5
+
+/// ## Selector for `self.withdraw()`
+#define constant WITHDRAW_SEL = 0x3ccfd60b
+
+/// ## Selector for `self.transferOwnership(address)`
+#define constant TRANSFER_OWNERSHIP_SEL = 0xf2fde38b
+
+/// ## Selector for `self.owner()`
+#define constant OWNER_SEL = 0x8da5cb5b
+
+/// ## Selector for `Seaport.fulfillBasicOrder(BasicOrderParameters calldata)`
+#define constant FULFILL_BASIC_SEL = 0xfb0f3ee1
+
+/// ## Selector for `ERC721.approve(address, uint256)
+#define constant APPROVE_SEL = 0x095ea7b3
+
+/// ## Selector for LSSVMPairEth.swapNFTsForToken(uint256[] calldata, uint256, address, bool, address)`
+#define constant SWAP_SEL = 0xb1d3f1c1
+
+// -------------------------------------------------------------------------------------------------
+// STORAGE LAYOUT
+
+/// ## Storage slot for Owner
+#define constant OWNER_SLOT = FREE_STORAGE_POINTER()
+
+// -------------------------------------------------------------------------------------------------
+// MEMORY POINTERS
+
+/// ## Memory Pointer to Call Selector
+#define constant SEL_MEM_PTR = 0x00
+
+/// ## Memory Pointer to Call Arguments
+///
+/// > Note: We store the selector for each call as the least significant bytes to save on codesize.
+#define constant ARGS_MEM_PTR = 0x1c
+
+/// ## Memory Pointer to Individual Call Arguments
+#define constant ARG0_MEM_PTR = 0x20
+#define constant ARG1_MEM_PTR = 0x40
+#define constant ARG2_MEM_PTR = 0x60
+#define constant ARG3_MEM_PTR = 0x80
+#define constant ARG4_MEM_PTR = 0xa0
+#define constant ARG5_MEM_PTR = 0xc0
+#define constant ARG6_MEM_PTR = 0xe0
+
+// -------------------------------------------------------------------------------------------------
+// CALLDATA POINTERS
+
+/// ## Calldata Pointer to `BasicOrderParameters` in `executeArb`
+#define constant BASIC_ORDER_CD_PTR = 0x64
+
+/// ## Calldata Pointer to `paymentValue` in `executeArb`
+#define constant PAYMENT_VALUE_CD_PTR = 0x24
+
+/// ## Calldata Pointer to `sudoPool` in `executeArb`
+#define constant SUDO_POOL_CD_PTR = 0x44
+
+/// ## Calldata Pointer to `BasicOrderParameters.offerToken` in `executeArb`
+#define constant OFFER_TOKEN_CD_PTR = 0x104
+
+/// ## Calldata Pointer to `BasicOrderParameters.offerIdentifier` in `executeArb`
+#define constant OFFER_IDENTIFIER_CD_PTR = 0x124
+
+// -------------------------------------------------------------------------------------------------
+// LENGTHS
+
+/// ## EVM Word Length
+#define constant WORD_LEN = 0x20
+
+/// ## Length of `Seaport.fulfillBasicOrder` Arguments Without `BasicOrderParameters`
+#define constant FULFILL_BASIC_LEN = 0x24
+
+/// ## Length of `ERC721.approve` Arguments
+#define constant APPROVE_LEN = 0x44
+
+/// ## Length of `LSSVMPairEth.swapNFTsForToken` Arguments
+#define constant SWAP_LEN = 0xe4
+
+// -------------------------------------------------------------------------------------------------
+// MISC
+
+/// ## Seaport Contract Address
+#define constant SEAPORT = 0x01ad428e4906aE43D8F9852d0dD6

@@ -2,18 +2,25 @@ use anyhow::{Error, Result};
 use clap::{Parser, ValueHint};
 use convert_case::{Case, Casing};
 use quote::__private::TokenStream;
-use std::ffi::OsString;
 use std::fs::{create_dir, File};
 use std::io::Write;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::init::{generate_constants, generate_lib, generate_strategy, generate_types};
+
+const SRC_DIR: &str = "src";
+const LIB_FILE: &str = "lib.rs";
+const CONSTANTS_FILE: &str = "constants.rs";
+const STRATEGY_FILE: &str = "strategy.rs";
+const TYPES_FILE: &str = "types.rs";
+const CARGO_FILE: &str = "Cargo.toml";
 
 #[derive(Debug, Clone, Parser)]
 pub struct StrategyParser {
     /// The root directory of the new project.
     #[clap(value_hint = ValueHint::DirPath, default_value = "crates/strategies/")]
-    root: OsString,
+    root: PathBuf,
 
     #[clap(long, short)]
     strategy_name: String,
@@ -44,9 +51,9 @@ impl StrategyParser {
     }
 }
 
-fn generate_crate(
+fn generate_crate<P: AsRef<Path>>(
     crate_name: &str,
-    root: &OsString,
+    root: P,
     strategy: TokenStream,
     constants: TokenStream,
     types: TokenStream,
@@ -59,58 +66,60 @@ fn generate_crate(
         ("async-trait", "0.1.64"),
     ];
 
-    let path = root.as_os_str();
-
-    let path_and_crate = path.to_str().unwrap().to_owned() + crate_name;
+    let path: PathBuf = {
+        let mut p: PathBuf = root.as_ref().to_path_buf();
+        p.push(crate_name);
+        p
+    };
 
     // Create crate directory
-    create_dir(&path_and_crate)?;
+    create_dir(&path)?;
 
     // Create src directory
-    let src_dir = format!("{}/src", path_and_crate);
-    create_dir(src_dir)?;
+    let src_dir = path.join(SRC_DIR);
+    create_dir(&src_dir)?;
 
     // Generate lib.rs file
-    let lib_file = format!("{}/src/lib.rs", path_and_crate);
+    let lib_file = src_dir.join(LIB_FILE);
     let lib_code = lib.to_string();
-    write_to_file(&lib_file, &lib_code)?;
+    write_to_file(lib_file, &lib_code)?;
 
     // Generate constants.rs file
-    let constants_file = format!("{}/src/constants.rs", path_and_crate);
+    let constants_file = src_dir.join(CONSTANTS_FILE);
     let constants_code = constants.to_string();
-    write_to_file(&constants_file, &constants_code)?;
+    write_to_file(constants_file, &constants_code)?;
 
     // Generate strategy.rs file
-    let strategy_file = format!("{}/src/strategy.rs", path_and_crate);
+    let strategy_file = src_dir.join(STRATEGY_FILE);
     let strategy_code = strategy.to_string();
-    write_to_file(&strategy_file, &strategy_code)?;
+    write_to_file(strategy_file, &strategy_code)?;
 
     // Generate types.rs file
-    let types_file = format!("{}/src/types.rs", path_and_crate);
+    let types_file = src_dir.join(TYPES_FILE);
     let types_code = types.to_string();
-    write_to_file(&types_file, &types_code)?;
+    write_to_file(types_file, &types_code)?;
 
     // Generate Cargo.toml file
-    let cargo_toml_file = format!("{}/Cargo.toml", path_and_crate);
+    let cargo_toml_file = path.join(CARGO_FILE);
     let cargo_toml_code = generate_cargo_toml_code(crate_name, &dependencies);
-    write_to_file(&cargo_toml_file, &cargo_toml_code)?;
+    write_to_file(cargo_toml_file, &cargo_toml_code)?;
 
     // Format the generated code using rustfmt
-    format_code(&path_and_crate)?;
+    format_code(path)?;
 
     Ok(())
 }
 
-fn write_to_file(file_path: &str, content: &str) -> std::io::Result<()> {
+fn write_to_file<P: AsRef<Path>>(file_path: P, content: &str) -> std::io::Result<()> {
     let mut file = File::create(file_path)?;
     file.write_all(content.as_bytes())?;
     Ok(())
 }
 
-fn format_code(crate_name: &str) -> Result<(), Error> {
+fn format_code<P: AsRef<Path>>(crate_name: P) -> Result<(), Error> {
     let output = Command::new("cargo")
         .arg("fmt")
-        .current_dir(crate_name)
+        .current_dir(crate_name.as_ref().as_os_str())
         .output()?;
 
     if !output.status.success() {

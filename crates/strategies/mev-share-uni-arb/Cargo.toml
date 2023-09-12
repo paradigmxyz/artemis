@@ -1,0 +1,23 @@
+[package]
+name = "mev-share-uni-arb"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ethers = { version = "2", features = ["ws", "rustls"]}
+tokio = { version = "1.18", features = ["full"] }
+mev-share = "0.1.4"
+async-trait = "0.1.64"
+artemis-core = { path = "../../artemis-core" }
+anyhow = "1.0.70"
+tracing = "0.1.37"
+tracing-subscriber = "0.3.16"
+csv = "1.1"
+serde = { version = "1", features = ["derive"] }
+mev-share-bindings = { path = "./bindings" }
+
+
+
+

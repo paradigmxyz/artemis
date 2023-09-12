@@ -1,0 +1,194 @@
+//! # Sudo x Opensea Arbitrage Contract
+//!
+//! Contains the logic for permissioned Sudo x Opensea arbitrage transactions.
+
+#include "./LibConst.huff"
+#include "./LibCall.huff"
+
+/// ## Unauthorized Error
+#define error Unauthorized()
+
+/// ## No Profit Error
+#define error NoProfit()
+
+/// ## Initcode
+///
+/// ### Directives
+///
+/// 1. Store the caller as the owner in storage.
+/// 2. Return the runtime code (implicit).
+#define macro CONSTRUCTOR() = takes (0) returns (0) {
+    caller                  // [caller]
+    [OWNER_SLOT]            // [owner_slot, caller]
+    sstore                  // []
+}
+
+/// ## Program Entry Point
+///
+/// ### Directives
+///
+/// 1. Extracts the 4 byte function selector from calldata.
+/// 2. Dispatches to the appropriate function, ordered to optimize gas usage.
+/// 3. If no selector matches, halt gracefully to allow ether in-transfers.
+///
+/// #### Selector Ordering
+///
+/// We order selectors by view vs stateful calls first, then by expected frequency of use.
+///
+/// 1. `executeArb` executes arbitrage, highest frequency with gas required.
+/// 2. `withdraw` withdraws funds, less frequent with gas required.
+/// 3. `transferOwner` transfers ownership, least frequent with gas required.
+/// 4. `owner` returns owner, no gas required.
+///
+/// ### Panics
+///
+/// - When a dispatched function panics.
+#define macro MAIN() = takes (0) returns (0) {
+    // dispatch function by its selector
+    0x00 calldataload 0xe0 shr
+    dup1 [EXECUTE_ARB_SEL] eq is_execute_arb jumpi
+    dup1 [WITHDRAW_SEL] eq is_withdraw jumpi
+    dup1 [TRANSFER_OWNERSHIP_SEL] eq is_transfer_ownership jumpi
+    [OWNER_SEL] eq is_get_owner jumpi
+
+    // if no selector matches, it's an ether transfer, so we halt gracefully.
+    stop
+
+    // execute arbitrage
+    is_execute_arb:
+        EXECUTE_ARB()
+
+    // execute withdraw
+    is_withdraw:
+        WITHDRAW()
+
+    // execute ownership transfer
+    is_transfer_ownership:
+        TRANFSER_OWNERSHIP()
+
+    // get owner
+    is_get_owner:
+        GET_OWNER()
+}
+
+/// ## Execute Arbitrage
+///
+/// ### Directives
+///
+/// 1. Cache the initial self balance.
+/// 2. Call `fulfillBasicOrder` on Opensea.
+/// 3. Call `approve` to delegate transfer permission to Sudo.
+/// 4. Call `swapNFTsForTokens` on the Sudo.
+/// 5. Checks that the contract made a profit, panics if not.
+/// 6. Halt gracefully.
+///
+/// ### Panics
+///
+/// - When `CALL_FULFILL_BASIC_ORDER` panics.
+/// - When `CALL_APPROVE` panics.
+/// - When `CALL_SWAP` panics.
+/// - When the contract did not make a profit.
+#define macro EXECUTE_ARB() = takes (0) returns (0) {
+    selfbalance                 // [init_bal]
+    CALL_FULFILL_BASIC_ORDER()  // [init_bal]
+    CALL_APPROVE()              // [init_bal]
+    CALL_SWAP()                 // [init_bal]
+    selfbalance                 // [after_bal, init_bal]
+    gt                          // [made_profit]
+    made_profit                 // [made_profit_dest, made_profit]
+    jumpi                       // []
+        __ERROR(NoProfit)       // [no_profit_err]
+        0x00 mstore             // []
+        0x04 0x00 revert        // []
+    made_profit:                // []
+        stop                    // []
+}
+
+/// ## Withdraw Funds
+///
+/// ### Directives
+///
+/// 1. Load the owner from storage.
+/// 2. Checks that the caller is the owner, panics if not.
+/// 3. Transfer the contract's ether balance to the caller.
+/// 4. Halt gracefully, regardless of success.
+///
+/// ### Panics
+///
+/// - When the caller is not the owner.
+#define macro WITHDRAW() = takes (0) returns (0) {
+    [OWNER_SLOT]                // [owner_slot]
+    sload                       // [owner]
+    caller                      // [caller, owner]
+    eq                          // [is_owner]
+    is_owner                    // [is_owner_dest, is_owner]
+    jumpi                       // []
+        __ERROR(Unauthorized)   // [unauthorized_err]
+        0x00                    // [mem_ptr, unauthorized_err]
+        mstore                  // []
+        0x04                    // [mem_len]
+        0x00                    // [mem_ptr, mem_len]
+        revert                  // []
+
+    is_owner:                   // []
+        0x00                    // [ret_len]
+        0x00                    // [ret_ptr, ret_len]
+        0x00                    // [arg_len, ret_ptr, ret_len]
+        0x00                    // [arg_ptr, arg_len, ret_ptr, ret_len]
+        selfbalance             // [value, arg_ptr, arg_len, ret_ptr, ret_len]
+        caller                  // [target, value, arg_ptr, arg_len, ret_ptr, ret_len]
+        gas                     // [gas, target, value, arg_ptr, arg_len, ret_ptr, ret_len]
+        call                    // [success]
+        stop                    // []
+}
+
+/// ## Transfer Ownership
+///
+/// ### Directives
+///
+/// 1. Load the owner from storage.
+/// 2. Checks that the caller is the owner, panics if not.
+/// 3. Load the new owner from calldata.
+/// 4. Store the new owner in storage.
+/// 5. Halt gracefully.
+///
+/// ### Panics
+///
+/// - When the caller is not the owner.
+#define macro TRANFSER_OWNERSHIP() = takes (0) returns (0) {
+    [OWNER_SLOT]                // [owner_slot]
+    sload                       // [owner]
+    caller                      // [caller, owner]
+    eq                          // [is_owner]
+    is_owner                    // [is_owner_dest, is_owner]
+    jumpi                       // []
+        __ERROR(Unauthorized)   // [unauthorized_err]
+        0x00                    // [mem_ptr, unauthorized_err]
+        mstore                  // []
+        0x04                    // [mem_len]
+        0x00                    // [mem_ptr, mem_len]
+        revert                  // []
+
+    is_owner:                   // []
+        0x04                    // [new_owner_ptr]
+        calldataload            // [new_owner]
+        [OWNER_SLOT]            // [owner_slot, new_owner]
+        sstore                  // []
+        stop                    // []
+}
+
+/// ## Get Owner
+///
+/// ### Directives
+///
+/// 1. Load the owner from storage.
+/// 2. Return the owner.
+#define macro GET_OWNER() = takes (0) returns (0) {
+    [OWNER_SLOT]            // [owner_slot]
+    sload                   // [owner]
+    0x00                    // [mem_ptr, owner]
+    mstore                  // []
+    0x20                    // [mem_len]
+    0x00                    // [mem_ptr, mem_len]
+    return                  // []
+}

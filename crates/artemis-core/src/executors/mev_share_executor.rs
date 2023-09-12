@@ -1,46 +1,46 @@
 use crate::types::Executor;
 use anyhow::Result;
 use async_trait::async_trait;
-use ethers::{signers::Signer, types::Chain};
-use futures::{stream, StreamExt};
-use matchmaker::{client::Client, types::BundleRequest};
+use ethers::signers::Signer;
+use jsonrpsee::http_client::{
+    transport::{self},
+    HttpClientBuilder,
+};
+use mev_share::rpc::{FlashbotsSignerLayer, MevApiClient, SendBundleRequest};
+
 use tracing::{error, info};
 
 /// An executor that sends bundles to the MEV-share Matchmaker.
-pub struct MevshareExecutor<S> {
-    matchmaker_client: Client<S>,
+pub struct MevshareExecutor {
+    mev_share_client: Box<dyn MevApiClient + Send + Sync>,
 }
 
-/// List of bundles to send to the Matchmaker.
-pub type Bundles = Vec<BundleRequest>;
-
-impl<S: Signer + Clone + 'static> MevshareExecutor<S> {
-    pub fn new(signer: S, chain: Chain) -> Self {
+impl MevshareExecutor {
+    pub fn new(signer: impl Signer + Clone + 'static) -> Self {
+        // Set up flashbots-style auth middleware
+        let http = HttpClientBuilder::default()
+            .set_middleware(
+                tower::ServiceBuilder::new()
+                    .map_err(transport::Error::Http)
+                    .layer(FlashbotsSignerLayer::new(signer)),
+            )
+            .build("https://relay.flashbots.net:443")
+            .expect("failed to build HTTP client");
         Self {
-            matchmaker_client: Client::new(signer, chain),
+            mev_share_client: Box::new(http),
         }
     }
 }
 
 #[async_trait]
-impl<S: Signer + Clone + 'static> Executor<Bundles> for MevshareExecutor<S> {
+impl Executor<SendBundleRequest> for MevshareExecutor {
     /// Send bundles to the matchmaker.
-    async fn execute(&self, action: Bundles) -> Result<()> {
-        let bodies = stream::iter(action)
-            .map(|bundle| {
-                let client = &self.matchmaker_client;
-                async move { client.send_bundle(&bundle).await }
-            })
-            .buffer_unordered(5);
-
-        bodies
-            .for_each(|b| async {
-                match b {
-                    Ok(b) => info!("Bundle response: {:?}", b),
-                    Err(e) => error!("Bundle error: {}", e),
-                }
-            })
-            .await;
+    async fn execute(&self, action: SendBundleRequest) -> Result<()> {
+        let body = self.mev_share_client.send_bundle(action).await;
+        match body {
+            Ok(body) => info!("Bundle response: {:?}", body),
+            Err(e) => error!("Bundle error: {}", e),
+        };
         Ok(())
     }
 }

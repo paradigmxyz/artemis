@@ -5,10 +5,17 @@ members = [
     "crates/artemis-core",
     "crates/generator",
     "crates/strategies/*",
-    "crates/clients/*"
+    "crates/clients/*", 
+    "examples/*",
 ]
 
-default-members = ["bin/artemis"]
+default-members = ["bin/artemis", "bin/cli"]
+
+[workspace.dependencies]
+## eth
+ethers = { version = "2", features = ["ws", "rustls"]}
+ethers-signers = "2.0"
+
 
 [profile.release]
 panic = 'abort'

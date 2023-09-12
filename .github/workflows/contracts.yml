@@ -18,9 +18,9 @@ jobs:
         with:
           version: nightly
 
+      - name: Foundry version 
+        run: forge --version
+
       # We need to run tests for every strategy independently
       - name: Run Opensea Sudo Arb tests
         run: forge test --root ./crates/strategies/opensea-sudo-arb/contracts
-
-      - name: Foundry version 
-        run: forge --version
