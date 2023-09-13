@@ -21,7 +21,7 @@ impl MevShareCollector {
 #[async_trait]
 impl Collector<Event> for MevShareCollector {
     async fn get_event_stream(&self) -> Result<CollectorStream<'_, Event>> {
-        let client = EventClient::default();
+        let client = EventClient::default().with_max_retries(10);
         let stream = client.events(&self.mevshare_sse_url).await.unwrap();
         let stream = stream.filter_map(|event| match event {
             Ok(evt) => Some(evt),
