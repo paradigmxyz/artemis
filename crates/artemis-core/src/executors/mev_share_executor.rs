@@ -16,6 +16,7 @@ pub struct MevshareExecutor {
 }
 
 impl MevshareExecutor {
+    /// Create a new executor with the Flashbots mev-share relay
     pub fn new(signer: impl Signer + Clone + 'static) -> Self {
         // Set up flashbots-style auth middleware
         let http = HttpClientBuilder::default()
@@ -30,6 +31,7 @@ impl MevshareExecutor {
             mev_share_client: Box::new(http),
         }
     }
+    /// Create a new executor and specify a relay url
     pub fn new_with_relay(signer: impl Signer + Clone + 'static, relay: &str) -> Self {
         // Set up flashbots-style auth middleware
         let http = HttpClientBuilder::default()
