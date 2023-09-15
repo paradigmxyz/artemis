@@ -1,17 +1,18 @@
-# [`fiber`][fiber] low-latency mempool and block streaming
+# Artemis x Chainbound integration
 
-> This crate gives you access to the [Fiber Network][fiber]'s low-latency mempool and block
-> streaming service. It exports a custom `Collector` for you to use seamlessly
-> in your existing Artemis strategies.
+> This crate gives you access to the [Chainbound][chainbound] suite of tools & services for MEV.
+> It is built directly into the [Artemis][artemis] framework for seamless integration with your existing
+> trading strategies.
 
-This crate is a thin wrapper around the the official [Fiber client for Rust][fiber-rs] which contains all the types and
-utilities needed to get started. Please also refer to the [Fiber documentation][fiber-docs] for more details.
+There are two main components:
 
-[fiber]: https://fiber.chainbound.io/
-[fiber-rs]: https://github.com/chainbound/fiber-rs
-[fiber-docs]: https://fiber.chainbound.io/docs/intro
+- [fiber][fiber]: a low-latency, reliable `mempool` and `new_blocks` stream for Ethereum.
+- [echo][echo]: a feature-rich RPC endpoint to propagate your MEV bundles to block builders.
 
 ## Usage
+
+<details>
+<summary>Usage as a dependency in a new Cargo project</summary>
 
 This example assumes you are using a clean Cargo project to implement your strategies.
 
@@ -20,7 +21,7 @@ Add the following to your `Cargo.toml`:
 ```toml
 [dependencies]
 artemis-core = { git = "https://github.com/paradigmxyz/artemis.git" }
-fiber-artemis = { git = "https://github.com/paradigmxyz/artemis.git" }
+chainbound-artemis = { git = "https://github.com/paradigmxyz/artemis.git" }
 
 tokio = { version = "1.18", features = ["full"] }
 anyhow = "1.0.70"
@@ -68,3 +69,28 @@ pub async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 ```
+
+</details>
+
+<details>
+<summary>Usage inside the Artemis framework (this repository)</summary>
+
+<!-- TODO -->
+
+</details>
+
+## Useful Links
+
+- [Chainbound website][chainbound]
+- [Fiber documentation][fiber-docs]
+- [Echo documentation][echo-docs]
+- [Chainbound Discord][discord]
+- [Chainbound Twitter][twitter]
+
+[chainbound]: https://chainbound.io/
+[echo]: https://echo.chainbound.io/
+[fiber]: https://fiber.chainbound.io/
+[fiber-docs]: https://fiber.chainbound.io/docs/intro
+[echo-docs]: https://echo.chainbound.io/docs/architecture
+[discord]: https://discord.com/invite/J4KNdeCYGX
+[twitter]: https://twitter.com/chainbound_
