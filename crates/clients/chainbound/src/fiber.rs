@@ -9,6 +9,8 @@ use futures::StreamExt;
 
 use artemis_core::types::{Collector, CollectorStream};
 
+const FIBER_DEFAULT_URL: &str = "beta.fiberapi.io:8080";
+
 /// Possible events emitted by the Fiber collector.
 #[derive(Clone, Debug)]
 #[allow(clippy::large_enum_variant)]
@@ -37,16 +39,33 @@ pub enum StreamType {
 
 pub struct FiberCollector {
     client: Client,
+    api_key: String,
     ty: StreamType,
 }
 
 impl FiberCollector {
-    pub async fn new(endpoint: String, api_key: String, ty: StreamType) -> Self {
-        let client = Client::connect(endpoint, api_key)
+    /// Initialize a new Fiber collector.
+    ///
+    /// ## Arguments
+    /// - `api_key`: The Fiber API key to use
+    /// - `ty`: The type of stream to subscribe to
+    pub async fn new(api_key: String, ty: StreamType) -> Self {
+        let client = Client::connect(FIBER_DEFAULT_URL.into(), api_key.clone())
             .await
-            .expect("failed to connect to fiber");
+            .expect("failed to connect to Fiber");
 
-        Self { client, ty }
+        Self {
+            client,
+            api_key,
+            ty,
+        }
+    }
+
+    /// Optionally set the Fiber endpoint, overriding the default
+    pub async fn set_fiber_endpoint(&mut self, endpoint: impl Into<String>) {
+        self.client = Client::connect(endpoint.into(), self.api_key.clone())
+            .await
+            .expect("failed to connect to Fiber");
     }
 
     pub async fn get_event_stream(&self) -> Result<CollectorStream<'_, Event>> {
@@ -94,11 +113,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_fiber_collector_txs() -> Result<()> {
-        if let Ok(fiber_api_key) = std::env::var("FIBER_TEST_KEY") {
-            let fiber_url = "beta.fiberapi.io:8080".into();
-
-            let fiber_collector =
-                FiberCollector::new(fiber_url, fiber_api_key, StreamType::Transactions).await;
+        if let Ok(api_key) = std::env::var("FIBER_TEST_KEY") {
+            let fiber_collector = FiberCollector::new(api_key, StreamType::Transactions).await;
 
             let mut engine: Engine<Event, Action> = Engine::default();
             engine.add_collector(Box::new(fiber_collector));

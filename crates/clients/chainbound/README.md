@@ -4,10 +4,10 @@
 > It is built directly into the [Artemis][artemis] framework for seamless integration with your existing
 > trading strategies.
 
-There are two main components:
+This crate offers two main components, which are implemented following the standard Artemis traits:
 
-- [fiber][fiber]: a low-latency, reliable `mempool` and `new_blocks` stream for Ethereum.
-- [echo][echo]: a feature-rich RPC endpoint to propagate your MEV bundles to block builders.
+- [Fiber][fiber] Collector: a low-latency, reliable `mempool` and `new_blocks` stream for Ethereum.
+- [Echo][echo] Executor: a feature-rich RPC endpoint to propagate your MEV bundles to block builders.
 
 ## Usage
 
@@ -87,6 +87,7 @@ pub async fn main() -> anyhow::Result<()> {
 - [Chainbound Discord][discord]
 - [Chainbound Twitter][twitter]
 
+[artemis]: https://github.com/paradigmxyz/artemis
 [chainbound]: https://chainbound.io/
 [echo]: https://echo.chainbound.io/
 [fiber]: https://fiber.chainbound.io/

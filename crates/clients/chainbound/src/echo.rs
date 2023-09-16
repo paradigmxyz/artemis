@@ -17,6 +17,8 @@ const ECHO_RPC_URL: &str = "https://echo-rpc.chainbound.io";
 
 /// An Echo executor that sends transactions to the specified block builders
 pub struct EchoExecutor<M, S> {
+    /// The Echo RPC endpoint
+    echo_endpoint: String,
     /// The HTTP client to send requests to the Echo RPC
     echo_client: Client,
     /// The native ethers middleware
@@ -28,6 +30,13 @@ pub struct EchoExecutor<M, S> {
 }
 
 impl<M: Middleware, S: Signer> EchoExecutor<M, S> {
+    /// Initialize a new Echo executor.
+    ///
+    /// ## Arguments
+    /// - `inner`: The native ethers middleware that can query the blockchain
+    /// - `tx_signer`: The actual signer of the bundle transactions
+    /// - `auth_signer`: The signer to compute the `X-Flashbots-Signature` of the bundle payload
+    /// - `api_key`: The Echo API key to use
     pub fn new(inner: Arc<M>, tx_signer: S, auth_signer: S, api_key: impl Into<String>) -> Self {
         let mut headers = HeaderMap::new();
         headers.insert("Content-Type", "application/json".parse().unwrap());
@@ -40,11 +49,17 @@ impl<M: Middleware, S: Signer> EchoExecutor<M, S> {
             .expect("Could not instantiate HTTP client");
 
         Self {
+            echo_endpoint: ECHO_RPC_URL.into(),
             echo_client,
             inner,
             tx_signer,
             auth_signer,
         }
+    }
+
+    /// Optionally set the Echo RPC endpoint, overriding the default
+    pub fn set_rpc_endpoint(&mut self, endpoint: impl Into<String>) {
+        self.echo_endpoint = endpoint.into();
     }
 }
 
