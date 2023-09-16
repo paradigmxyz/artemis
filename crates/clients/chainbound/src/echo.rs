@@ -1,119 +1,21 @@
 use std::{sync::Arc, time::Duration};
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use ethers::{
-    providers::Middleware,
-    signers::Signer,
-    types::transaction::eip2718::TypedTransaction,
-    types::{Bytes, TxHash},
+use ethers::{providers::Middleware, signers::Signer};
+use reqwest::{
+    header::{HeaderMap, HeaderValue},
+    Client,
 };
-use reqwest::{header::HeaderMap, Client};
-use serde::Serialize;
-use tracing::error;
+use tracing::{error, info};
 
 use artemis_core::types::Executor;
 
-#[derive(Debug, Serialize, Default)]
-#[serde(rename_all = "lowercase")]
-pub enum Builder {
-    Flashbots,
-    Beaverbuild,
-    Rsync,
-    Builder0x69,
-    Titan,
-    F1b,
-    Blocknative,
-    Nfactorial,
-    Buildai,
+use crate::MevBundle;
 
-    /// Custom builder name (must be supported by the Echo RPC).
-    /// This can be useful if a new Echo version comes out and this
-    /// library has not been updated yet.
-    Other(String),
+const ECHO_RPC_URL: &str = "https://echo-rpc.chainbound.io";
 
-    /// Use all available builders. This is the default behavior.
-    #[default]
-    All,
-}
-
-/// Complete bundle interface, including Echo-specific features.
-/// See the full specs and their meaning here: <https://echo.chainbound.io/docs/usage/api-interface>
-#[derive(Debug, Default)]
-pub struct MevBundle {
-    pub txs: Vec<TypedTransaction>,
-    pub signed_txs: Vec<Bytes>,
-    pub block_number: Option<u64>,
-    pub min_timestamp: Option<u64>,
-    pub max_timestamp: Option<u64>,
-    pub reverting_tx_hashes: Option<Vec<TxHash>>,
-    pub replacement_uuid: Option<String>,
-    pub mev_builders: Option<Vec<Builder>>,
-    pub use_public_mempool: Option<bool>,
-    pub await_receipt: Option<bool>,
-    pub await_receipt_timeout_ms: Option<u64>,
-}
-
-impl MevBundle {
-    pub fn with_txs(txs: Vec<TypedTransaction>) -> Self {
-        Self {
-            txs,
-            ..Default::default()
-        }
-    }
-
-    pub fn add_signed_tx(&mut self, tx: Bytes) -> &mut Self {
-        self.signed_txs.push(tx);
-        self
-    }
-
-    pub fn set_block_number(&mut self, block_number: u64) -> &mut Self {
-        self.block_number = Some(block_number);
-        self
-    }
-
-    pub fn set_min_timestamp(&mut self, min_timestamp: u64) -> &mut Self {
-        self.min_timestamp = Some(min_timestamp);
-        self
-    }
-
-    pub fn set_max_timestamp(&mut self, max_timestamp: u64) -> &mut Self {
-        self.max_timestamp = Some(max_timestamp);
-        self
-    }
-
-    pub fn set_reverting_tx_hashes(&mut self, reverting_tx_hashes: Vec<TxHash>) -> &mut Self {
-        self.reverting_tx_hashes = Some(reverting_tx_hashes);
-        self
-    }
-
-    pub fn set_replacement_uuid(&mut self, replacement_uuid: String) -> &mut Self {
-        self.replacement_uuid = Some(replacement_uuid);
-        self
-    }
-
-    pub fn set_mev_builders(&mut self, mev_builders: Vec<Builder>) -> &mut Self {
-        self.mev_builders = Some(mev_builders);
-        self
-    }
-
-    pub fn set_use_public_mempool(&mut self, use_public_mempool: bool) -> &mut Self {
-        self.use_public_mempool = Some(use_public_mempool);
-        self
-    }
-
-    pub fn set_await_receipt(&mut self, await_receipt: bool) -> &mut Self {
-        self.await_receipt = Some(await_receipt);
-        self
-    }
-
-    pub fn set_await_receipt_timeout_ms(&mut self, await_receipt_timeout_ms: u64) -> &mut Self {
-        self.await_receipt_timeout_ms = Some(await_receipt_timeout_ms);
-        self
-    }
-}
-
-/// An Echo executor that sends transactions to the specified block builders.
+/// An Echo executor that sends transactions to the specified block builders
 pub struct EchoExecutor<M, S> {
     /// The HTTP client to send requests to the Echo RPC
     echo_client: Client,
@@ -123,20 +25,15 @@ pub struct EchoExecutor<M, S> {
     tx_signer: S,
     /// the signer to compute the `X-Flashbots-Signature` of the bundle payload
     auth_signer: S,
-    /// The list of builders to send the bundles to
-    mev_builders: Vec<Builder>,
 }
 
 impl<M: Middleware, S: Signer> EchoExecutor<M, S> {
-    pub fn new(
-        inner: Arc<M>,
-        tx_signer: S,
-        auth_signer: S,
-        api_key: impl Into<String>,
-        mev_builders: Vec<Builder>,
-    ) -> Self {
-        let headers = HeaderMap::new();
-        let mut echo_client = Client::builder()
+    pub fn new(inner: Arc<M>, tx_signer: S, auth_signer: S, api_key: impl Into<String>) -> Self {
+        let mut headers = HeaderMap::new();
+        headers.insert("Content-Type", "application/json".parse().unwrap());
+        headers.insert("X-Api-Key", api_key.into().parse().expect("Broken API key"));
+
+        let echo_client = Client::builder()
             .timeout(Duration::from_secs(300))
             .default_headers(headers)
             .build()
@@ -147,7 +44,6 @@ impl<M: Middleware, S: Signer> EchoExecutor<M, S> {
             inner,
             tx_signer,
             auth_signer,
-            mev_builders,
         }
     }
 }
@@ -159,31 +55,62 @@ where
     M::Error: 'static,
     S: Signer + 'static,
 {
-    /// Send a bundle to transactions to the specified builders.
+    /// Send a bundle to transactions to the specified builders
     async fn execute(&self, mut action: MevBundle) -> Result<()> {
-        // Sign each transaction in bundle.
-        for tx in action.txs {
-            let signature = self.tx_signer.sign_transaction(&tx).await?;
+        if action.txs.is_empty() {
+            return Err(anyhow!(
+                "Bundle must contain at least one transaction. 
+                To cancel a bundle, use the `eth_cancelBundle` method."
+            ));
+        }
+
+        // Sign each transaction in bundle
+        for tx in &action.txs.clone() {
+            let signature = self.tx_signer.sign_transaction(tx).await?;
             action.add_signed_tx(tx.rlp_signed(&signature));
         }
 
-        // // Simulate bundle.
-        // let block_number = self.echo_client.get_block_number().await?;
-        // let bundle = bundle
-        //     .set_block(block_number + 1)
-        //     .set_simulation_block(block_number)
-        //     .set_simulation_timestamp(0);
-        // let simulated_bundle = self.echo_client.simulate_bundle(&bundle).await;
-        // if let Err(simulate_error) = simulated_bundle {
-        //     error!("Error simulating bundle: {:?}", simulate_error);
-        // }
+        // Set block number to the next block if not specified
+        if action.block_number.is_none() {
+            let block_number = self.inner.get_block_number().await?;
+            action.set_block_number(block_number.as_u64() + 1);
+        }
 
-        // Send bundle.
-        // TODO
-        let pending_bundle = self.echo_client.send_bundle(&bundle).await;
+        // TODO: Simulate bundle
 
-        if let Err(send_error) = pending_bundle {
-            error!("Error sending bundle: {:?}", send_error);
+        // Sign bundle payload
+        let signable_payload = action.format_json_rpc_request("eth_sendBundle", true);
+        let flashbots_signature = self.auth_signer.sign_message(&signable_payload).await?;
+
+        let flashbots_signature_header: HeaderValue =
+            format!("{}:{}", self.auth_signer.address(), flashbots_signature)
+                .parse()
+                .expect("could not parse X-Flashbots-Signature header");
+
+        // Prepare the JSON-RPC request body
+        let request_body = action.format_json_rpc_request("eth_sendBundle", false);
+
+        // Send bundle
+        let echo_response = self
+            .echo_client
+            .post(ECHO_RPC_URL)
+            .body(request_body)
+            .header("X-Flashbots-Signature", flashbots_signature_header)
+            .send()
+            .await;
+
+        match echo_response {
+            Ok(send_response) => {
+                let status = send_response.status();
+                let body = send_response.text().await?;
+
+                if status.is_success() {
+                    info!("Echo bundle response: {:?}", body);
+                } else {
+                    error!("Error in Echo bundle response: {:?}", body);
+                }
+            }
+            Err(send_error) => error!("Error while sending bundle to Echo: {:?}", send_error),
         }
 
         Ok(())
