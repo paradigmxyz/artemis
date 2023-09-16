@@ -217,6 +217,7 @@ impl MevBundle {
         }
     }
 
+    /// Returns the bundle as a JSON-RPC request string, ready to be sent to the Echo endpoint.
     pub fn format_json_rpc_request(&self, method: &str, include_echo_features: bool) -> String {
         format!(
             "{{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"{}\",\"params\":[{}]}}",

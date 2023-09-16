@@ -78,17 +78,16 @@ where
 
         // TODO: Simulate bundle
 
-        // Sign bundle payload
-        let signable_payload = action.format_json_rpc_request("eth_sendBundle", true);
+        // Sign bundle payload (without the Echo-specific features)
+        let signable_payload = action.format_json_rpc_request("eth_sendBundle", false);
         let flashbots_signature = self.auth_signer.sign_message(&signable_payload).await?;
 
+        // Create the `X-Flashbots-Signature` header
         let flashbots_signature_header: HeaderValue =
-            format!("{}:{}", self.auth_signer.address(), flashbots_signature)
-                .parse()
-                .expect("could not parse X-Flashbots-Signature header");
+            format!("{}:{}", self.auth_signer.address(), flashbots_signature).parse()?;
 
-        // Prepare the JSON-RPC request body
-        let request_body = action.format_json_rpc_request("eth_sendBundle", false);
+        // Prepare the full JSON-RPC request body
+        let request_body = action.format_json_rpc_request("eth_sendBundle", true);
 
         // Send bundle
         let echo_response = self
