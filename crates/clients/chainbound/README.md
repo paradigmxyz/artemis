@@ -11,18 +11,17 @@ This crate offers two main components, which are implemented following the stand
 
 ## Usage
 
-<details>
-<summary>Usage as a dependency in a new Cargo project</summary>
+This example assumes you are using a new crate to implement your strategies.
 
-This example assumes you are using a clean Cargo project to implement your strategies.
-
-Add the following to your `Cargo.toml`:
+First, add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
 artemis-core = { git = "https://github.com/paradigmxyz/artemis.git" }
 chainbound-artemis = { git = "https://github.com/paradigmxyz/artemis.git" }
 
+# the following dependencies are also used in this example
+ethers = {  version = "2", features = ["ws", "rustls"] }
 tokio = { version = "1.18", features = ["full"] }
 anyhow = "1.0.70"
 ```
@@ -30,16 +29,25 @@ anyhow = "1.0.70"
 Then, in your `main.rs`:
 
 ```rs
+use std::sync::Arc;
+use ethers::prelude::*;
+use ethers::types::Action;
+use ethers::providers::Provider;
 use artemis_core::engine::Engine;
-use fiber_artemis::{Action, Event, FiberCollector, StreamType};
+
+use chainbound_artemis::{
+    Event,
+    FiberCollector,
+    EchoExecutor,
+    BlockBuilder,
+    StreamType
+};
 
 #[tokio::main]
 pub async fn main() -> anyhow::Result<()> {
-    let fiber_endpoint = "beta.fiberapi.io:8080".into();
-
     // Join the Fiber Discord at https://discord.com/invite/J4KNdeCYGX
     // or write to <sales@chainbound.io> to get a free trial.
-    let fiber_api_key = std::env::var("FIBER_API_KEY")?;
+    let api_key = std::env::var("CHAINBOUND_API_KEY")?;
 
     // You can select your desired object type to stream here.
     // Please refer to the documentation at https://fiber.chainbound.io/docs/intro for more details.
@@ -52,14 +60,24 @@ pub async fn main() -> anyhow::Result<()> {
     let stream_type = StreamType::Transactions;
 
     // Simply create a new collector
-    let fiber_collector = FiberCollector::new(fiber_endpoint, fiber_api_key, stream_type).await;
+    let fiber_collector = FiberCollector::new(api_key.clone(), stream_type).await;
 
-    // And add it to your Artemis engine
+    // Now create the Echo Executor to send your bundles to your desired block builders
+    // we also need to instantiate a regular HTTP provider middleware, and two signers
+    // (one to actually sign the transactions, one for Flashbots' authentication header)
+    let provider = Arc::new(Provider::connect("https://eth.llamarpc.com").await.unwrap());
+    let tx_signer = LocalWallet::new(&mut rand::thread_rng()); // or any other signer
+    let auth_signer = LocalWallet::new(&mut rand::thread_rng()); // or any other signer
+    let echo_executor = EchoExecutor::new(provider, tx_signer, auth_signer, api_key);
+
+    // And add these components to your Artemis engine
     let mut engine: Engine<Event, Action> = Engine::default();
     engine.add_collector(Box::new(fiber_collector));
+    engine.add_executor(Box::new(echo_executor));
 
-    // ... Add your strategies and executors here ...
+    // --- bootstrap your trading strategy here ---
 
+    // Finally, run the engine
     if let Ok(mut set) = engine.run().await {
         while let Some(res) = set.join_next().await {
             println!("res: {:?}", res);
@@ -69,15 +87,6 @@ pub async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 ```
-
-</details>
-
-<details>
-<summary>Usage inside the Artemis framework (this repository)</summary>
-
-<!-- TODO -->
-
-</details>
 
 ## Useful Links
 

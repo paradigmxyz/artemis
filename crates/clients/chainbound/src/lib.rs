@@ -5,7 +5,7 @@ pub mod echo;
 pub use echo::EchoExecutor;
 
 pub mod mev_bundle;
-pub use mev_bundle::MevBundle;
+pub use mev_bundle::{BlockBuilder, MevBundle};
 
 #[cfg(test)]
 mod tests {
@@ -20,7 +20,7 @@ mod tests {
     };
     use futures::StreamExt;
 
-    use crate::{mev_bundle::Builder, EchoExecutor, Event, FiberCollector, MevBundle, StreamType};
+    use crate::{BlockBuilder, EchoExecutor, Event, FiberCollector, MevBundle, StreamType};
 
     #[tokio::test]
     pub async fn test_chainbound_client() {
@@ -44,7 +44,7 @@ mod tests {
                 .gas_price(U256::from_dec_str("100000000000000000").unwrap());
 
             let mut bundle = MevBundle::with_txs(vec![tx.into()]);
-            bundle.set_mev_builders(vec![Builder::Flashbots, Builder::Titan]);
+            bundle.set_mev_builders(vec![BlockBuilder::Flashbots, BlockBuilder::Titan]);
 
             echo_executor.execute(bundle).await.unwrap();
         } else {

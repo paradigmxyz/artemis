@@ -4,7 +4,7 @@ use ethers::{
 };
 
 #[derive(Debug, Default)]
-pub enum Builder {
+pub enum BlockBuilder {
     Flashbots,
     Beaverbuild,
     Rsync,
@@ -25,20 +25,20 @@ pub enum Builder {
     All,
 }
 
-impl ToString for Builder {
+impl ToString for BlockBuilder {
     fn to_string(&self) -> String {
         match self {
-            Builder::Flashbots => "flashbots".to_string(),
-            Builder::Beaverbuild => "beaverbuild".to_string(),
-            Builder::Rsync => "rsync".to_string(),
-            Builder::Builder0x69 => "builder0x69".to_string(),
-            Builder::Titan => "titan".to_string(),
-            Builder::F1b => "f1b".to_string(),
-            Builder::Blocknative => "blocknative".to_string(),
-            Builder::Nfactorial => "nfactorial".to_string(),
-            Builder::Buildai => "buildai".to_string(),
-            Builder::Other(name) => name.to_string(),
-            Builder::All => "all".to_string(),
+            BlockBuilder::Flashbots => "flashbots".to_string(),
+            BlockBuilder::Beaverbuild => "beaverbuild".to_string(),
+            BlockBuilder::Rsync => "rsync".to_string(),
+            BlockBuilder::Builder0x69 => "builder0x69".to_string(),
+            BlockBuilder::Titan => "titan".to_string(),
+            BlockBuilder::F1b => "f1b".to_string(),
+            BlockBuilder::Blocknative => "blocknative".to_string(),
+            BlockBuilder::Nfactorial => "nfactorial".to_string(),
+            BlockBuilder::Buildai => "buildai".to_string(),
+            BlockBuilder::Other(name) => name.to_string(),
+            BlockBuilder::All => "all".to_string(),
         }
     }
 }
@@ -54,7 +54,7 @@ pub struct MevBundle {
     pub max_timestamp: Option<u64>,
     pub reverting_tx_hashes: Option<Vec<TxHash>>,
     pub replacement_uuid: Option<String>,
-    pub mev_builders: Option<Vec<Builder>>,
+    pub mev_builders: Option<Vec<BlockBuilder>>,
     pub use_public_mempool: Option<bool>,
     pub await_receipt: Option<bool>,
     pub await_receipt_timeout_ms: Option<u64>,
@@ -98,7 +98,7 @@ impl MevBundle {
         self
     }
 
-    pub fn set_mev_builders(&mut self, mev_builders: Vec<Builder>) -> &mut Self {
+    pub fn set_mev_builders(&mut self, mev_builders: Vec<BlockBuilder>) -> &mut Self {
         self.mev_builders = Some(mev_builders);
         self
     }
