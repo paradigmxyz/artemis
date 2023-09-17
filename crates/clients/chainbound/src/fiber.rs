@@ -37,9 +37,13 @@ pub enum StreamType {
     BeaconBlocks,
 }
 
+/// A Fiber collector that subscribes to the specified stream type.
 pub struct FiberCollector {
+    /// The Fiber-rs client
     client: Client,
+    /// The Fiber API key
     api_key: String,
+    /// The type of stream to subscribe to
     ty: StreamType,
 }
 
