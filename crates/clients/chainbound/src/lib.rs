@@ -1,9 +1,14 @@
+#[doc = include_str!("../README.md")]
+
+/// Fiber Network client module
 pub mod fiber;
 pub use fiber::{Event, FiberCollector, StreamType};
 
+/// Echo RPC client module
 pub mod echo;
 pub use echo::EchoExecutor;
 
+/// MEV bundle helper types
 pub mod mev_bundle;
 pub use mev_bundle::{BlockBuilder, MevBundle};
 

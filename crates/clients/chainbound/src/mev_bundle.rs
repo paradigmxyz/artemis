@@ -3,6 +3,7 @@ use ethers::{
     utils::hex,
 };
 
+/// The list of available MEV builders.
 #[derive(Debug, Default)]
 pub enum BlockBuilder {
     Flashbots,
@@ -47,20 +48,38 @@ impl ToString for BlockBuilder {
 /// See the full specs and their meaning here: <https://echo.chainbound.io/docs/usage/api-interface>
 #[derive(Debug, Default)]
 pub struct MevBundle {
+    /// The transactions to be included in the bundle
     pub txs: Vec<TypedTransaction>,
+    /// The signed, RLP-encoded version of the txs. This field is filled by the EchoExecutor
+    /// and should not be set manually
     pub signed_txs: Vec<Bytes>,
+    /// The block number in which the bundle should be included
     pub block_number: Option<u64>,
+    /// The minimum timestamp of the block in which the bundle is valid
     pub min_timestamp: Option<u64>,
+    /// The maximum timestamp of the block in which the bundle is valid
     pub max_timestamp: Option<u64>,
+    /// The hashes of the transactions that are allowed to revert
     pub reverting_tx_hashes: Option<Vec<TxHash>>,
+    /// The identifier of the bundle to later replace it
     pub replacement_uuid: Option<String>,
+    /// The list of Block builders to use.
+    /// Default: all available builders
     pub mev_builders: Option<Vec<BlockBuilder>>,
+    /// Whether to also propagate the bundle on the public mempool.
+    /// WARNING: Please read more: <https://echo.chainbound.io/docs/usage/api-interface#eth_sendbundle>
+    /// Default: false
     pub use_public_mempool: Option<bool>,
+    /// Whether to hang the HTTP request in order to wait for the inclusion/timeout receipt
+    /// Default: false
     pub await_receipt: Option<bool>,
+    /// The timeout value in milliseconds for the inclusion/timeout receipt.
+    /// Default: 30.000ms
     pub await_receipt_timeout_ms: Option<u64>,
 }
 
 impl MevBundle {
+    /// Creates a new bundle with the given transactions
     pub fn with_txs(txs: Vec<TypedTransaction>) -> Self {
         Self {
             txs,
@@ -68,51 +87,61 @@ impl MevBundle {
         }
     }
 
+    /// Adds a signed transaction to the bundle
     pub fn add_signed_tx(&mut self, tx: Bytes) -> &mut Self {
         self.signed_txs.push(tx);
         self
     }
 
+    /// Sets the block number in which the bundle should be included
     pub fn set_block_number(&mut self, block_number: u64) -> &mut Self {
         self.block_number = Some(block_number);
         self
     }
 
+    /// Sets the minimum timestamp of the block in which the bundle is valid
     pub fn set_min_timestamp(&mut self, min_timestamp: u64) -> &mut Self {
         self.min_timestamp = Some(min_timestamp);
         self
     }
 
+    /// Sets the maximum timestamp of the block in which the bundle is valid
     pub fn set_max_timestamp(&mut self, max_timestamp: u64) -> &mut Self {
         self.max_timestamp = Some(max_timestamp);
         self
     }
 
+    /// Sets the hashes of the transactions that are allowed to revert
     pub fn set_reverting_tx_hashes(&mut self, reverting_tx_hashes: Vec<TxHash>) -> &mut Self {
         self.reverting_tx_hashes = Some(reverting_tx_hashes);
         self
     }
 
+    /// Sets the identifier of the bundle to later replace it
     pub fn set_replacement_uuid(&mut self, replacement_uuid: String) -> &mut Self {
         self.replacement_uuid = Some(replacement_uuid);
         self
     }
 
+    /// Sets the list of Block builders to use.
     pub fn set_mev_builders(&mut self, mev_builders: Vec<BlockBuilder>) -> &mut Self {
         self.mev_builders = Some(mev_builders);
         self
     }
 
+    /// Sets whether to also propagate the bundle on the public mempool.
     pub fn set_use_public_mempool(&mut self, use_public_mempool: bool) -> &mut Self {
         self.use_public_mempool = Some(use_public_mempool);
         self
     }
 
+    /// Sets whether to hang the HTTP request in order to wait for the inclusion/timeout receipt.
     pub fn set_await_receipt(&mut self, await_receipt: bool) -> &mut Self {
         self.await_receipt = Some(await_receipt);
         self
     }
 
+    /// Sets the timeout value in milliseconds for the inclusion/timeout receipt.
     pub fn set_await_receipt_timeout_ms(&mut self, await_receipt_timeout_ms: u64) -> &mut Self {
         self.await_receipt_timeout_ms = Some(await_receipt_timeout_ms);
         self
@@ -123,7 +152,7 @@ impl MevBundle {
     /// final formatting.
     ///
     /// ## Arguments
-    /// `include_echo_features`: If true, the resulting String will be formatted according to the
+    /// `include_echo_features`: If false, the resulting String will be formatted according to the
     /// Flashbots API specs. E.g. without the Echo-specific fields. This is useful for creating
     /// the `X-Flashbots-Signature` header for authentication purposes.
     pub fn format_json_body(&self, include_echo_features: bool) -> String {

@@ -72,6 +72,7 @@ impl FiberCollector {
             .expect("failed to connect to Fiber");
     }
 
+    /// Get the event stream for the specified stream type.
     pub async fn get_event_stream(&self) -> Result<CollectorStream<'_, Event>> {
         match self.ty {
             StreamType::Transactions => {
