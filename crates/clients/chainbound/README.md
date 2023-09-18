@@ -30,18 +30,10 @@ Then, in your `main.rs`:
 
 ```rs
 use std::sync::Arc;
-use ethers::prelude::*;
-use ethers::types::Action;
-use ethers::providers::Provider;
-use artemis_core::engine::Engine;
 
-use chainbound_artemis::{
-    Event,
-    FiberCollector,
-    EchoExecutor,
-    BlockBuilder,
-    StreamType
-};
+use artemis_core::{engine::Engine, types::ExecutorMap};
+use chainbound_artemis::{Action, EchoExecutor, Event, FiberCollector, StreamType};
+use ethers::{prelude::rand, providers::Provider, signers::LocalWallet};
 
 #[tokio::main]
 pub async fn main() -> anyhow::Result<()> {
@@ -60,7 +52,7 @@ pub async fn main() -> anyhow::Result<()> {
     let stream_type = StreamType::Transactions;
 
     // Simply create a new collector
-    let fiber_collector = FiberCollector::new(api_key.clone(), stream_type).await;
+    let fiber_collector = Box::new(FiberCollector::new(api_key.clone(), stream_type).await);
 
     // Now create the Echo Executor to send your bundles to your desired block builders.
     // We also need to instantiate a regular HTTP provider middleware, and two signers
@@ -70,12 +62,16 @@ pub async fn main() -> anyhow::Result<()> {
     let provider = Arc::new(Provider::connect("https://eth.llamarpc.com").await.unwrap());
     let tx_signer = LocalWallet::new(&mut rand::thread_rng()); // or any other signer
     let auth_signer = LocalWallet::new(&mut rand::thread_rng()); // or any other signer
-    let echo_executor = EchoExecutor::new(provider, tx_signer, auth_signer, api_key);
+    let echo_executor = Box::new(EchoExecutor::new(provider, tx_signer, auth_signer, api_key));
+
+    let executor_map = ExecutorMap::new(echo_executor, |action| match action {
+        Action::SendBundle(bundle) => Some(bundle),
+    });
 
     // And add these components to your Artemis engine
     let mut engine: Engine<Event, Action> = Engine::default();
-    engine.add_collector(Box::new(fiber_collector));
-    engine.add_executor(Box::new(echo_executor));
+    engine.add_collector(fiber_collector);
+    engine.add_executor(Box::new(executor_map));
 
     // --- bootstrap your trading strategy here ---
 

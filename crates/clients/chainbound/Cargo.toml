@@ -3,6 +3,8 @@ name = "chainbound-artemis"
 version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/paradigmxyz/artemis"
+readme = "README.md"
 
 [dependencies]
 artemis-core = { path = "../../artemis-core" }

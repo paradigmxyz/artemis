@@ -14,6 +14,7 @@ const FIBER_DEFAULT_URL: &str = "beta.fiberapi.io:8080";
 /// Possible events emitted by the Fiber collector.
 #[derive(Clone, Debug)]
 #[allow(clippy::large_enum_variant)]
+#[allow(missing_docs)]
 pub enum Event {
     Transaction(Transaction),
     ExectionHeader(ExecutionPayloadHeader),

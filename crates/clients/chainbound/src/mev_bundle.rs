@@ -4,7 +4,8 @@ use ethers::{
 };
 
 /// The list of available MEV builders.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
+#[allow(missing_docs)]
 pub enum BlockBuilder {
     Flashbots,
     Beaverbuild,
@@ -46,7 +47,7 @@ impl ToString for BlockBuilder {
 
 /// Complete bundle interface, including Echo-specific features.
 /// See the full specs and their meaning here: <https://echo.chainbound.io/docs/usage/api-interface>
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct MevBundle {
     /// The transactions to be included in the bundle
     pub txs: Vec<TypedTransaction>,

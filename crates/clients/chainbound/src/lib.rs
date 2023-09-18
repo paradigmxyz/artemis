@@ -1,4 +1,22 @@
-#[doc = include_str!("../README.md")]
+#![warn(missing_docs, unreachable_pub)]
+#![deny(unused_must_use, rust_2018_idioms)]
+#![doc(test(
+    no_crate_inject,
+    attr(deny(warnings, rust_2018_idioms), allow(dead_code, unused_variables))
+))]
+
+//! # Chainbound Artemis
+//!
+//! This crate gives you access to the [Chainbound][chainbound] suite of tools & services for MEV.
+//! It is built directly into the [Artemis][artemis] framework for seamless integration with your existing
+//! trading strategies.
+//!
+//! This crate offers two main components, which are implemented following the standard Artemis traits:
+//!
+//! - Fiber Collector: a low-latency, reliable `mempool` and `new_blocks` stream for Ethereum.
+//! - Echo Executor: a feature-rich RPC endpoint to propagate your MEV bundles to block builders.
+//!
+//! Please refer to the crate README file for an example on how to use these components.
 
 /// Fiber Network client module
 pub mod fiber;
@@ -6,7 +24,7 @@ pub use fiber::{Event, FiberCollector, StreamType};
 
 /// Echo RPC client module
 pub mod echo;
-pub use echo::EchoExecutor;
+pub use echo::{Action, EchoExecutor};
 
 /// MEV bundle helper types
 pub mod mev_bundle;
@@ -28,7 +46,7 @@ mod tests {
     use crate::{BlockBuilder, EchoExecutor, Event, FiberCollector, MevBundle, StreamType};
 
     #[tokio::test]
-    pub async fn test_chainbound_client() {
+    async fn test_chainbound_client() {
         if let Ok(api_key) = std::env::var("FIBER_TEST_KEY") {
             let ty = StreamType::Transactions;
             let fiber_tx_collector = FiberCollector::new(api_key.clone(), ty).await;

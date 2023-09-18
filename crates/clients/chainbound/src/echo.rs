@@ -13,6 +13,14 @@ use artemis_core::types::Executor;
 
 use crate::MevBundle;
 
+/// Possible actions that can be executed by the Echo executor
+#[derive(Debug, Clone)]
+#[allow(clippy::large_enum_variant)]
+#[allow(missing_docs)]
+pub enum Action {
+    SendBundle(MevBundle),
+}
+
 const ECHO_RPC_URL: &str = "https://echo-rpc.chainbound.io";
 
 /// An Echo executor that sends transactions to the specified block builders
@@ -107,7 +115,7 @@ where
         // Send bundle
         let echo_response = self
             .echo_client
-            .post(ECHO_RPC_URL)
+            .post(&self.echo_endpoint)
             .body(request_body)
             .header("X-Flashbots-Signature", flashbots_signature_header)
             .send()
