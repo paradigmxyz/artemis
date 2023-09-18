@@ -59,7 +59,7 @@ pub async fn main() -> anyhow::Result<()> {
     // (one to actually sign the transactions, one for Flashbots' authentication header)
     //
     // For more info, please refer to the documentation at https://echo.chainbound.io/docs/architecture
-    let provider = Arc::new(Provider::connect("https://eth.llamarpc.com").await.unwrap());
+    let provider = Arc::new(Provider::connect("wss://eth.llamarpc.com").await.unwrap());
     let tx_signer = LocalWallet::new(&mut rand::thread_rng()); // or any other signer
     let auth_signer = LocalWallet::new(&mut rand::thread_rng()); // or any other signer
     let echo_executor = Box::new(EchoExecutor::new(provider, tx_signer, auth_signer, api_key));

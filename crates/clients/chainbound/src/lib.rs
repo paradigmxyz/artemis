@@ -54,7 +54,7 @@ mod tests {
             let fiber_tx = fiber_tx_stream.into_future().await.0.unwrap();
             assert!(matches!(fiber_tx, Event::Transaction(_)));
 
-            let provider = Arc::new(Provider::connect("https://eth.llamarpc.com").await.unwrap());
+            let provider = Arc::new(Provider::connect("wss://eth.llamarpc.com").await.unwrap());
             let tx_signer = LocalWallet::new(&mut rand::thread_rng());
             let auth_signer = LocalWallet::new(&mut rand::thread_rng());
             let account = tx_signer.address();

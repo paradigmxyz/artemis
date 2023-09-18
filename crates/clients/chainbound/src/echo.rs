@@ -107,7 +107,7 @@ where
 
         // Create the `X-Flashbots-Signature` header
         let flashbots_signature_header: HeaderValue =
-            format!("{}:{}", self.auth_signer.address(), flashbots_signature).parse()?;
+            format!("{:#x}:{}", self.auth_signer.address(), flashbots_signature).parse()?;
 
         // Prepare the full JSON-RPC request body
         let request_body = action.format_json_rpc_request("eth_sendBundle", true);
