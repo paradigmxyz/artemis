@@ -45,7 +45,7 @@ use chainbound_artemis::{
 
 #[tokio::main]
 pub async fn main() -> anyhow::Result<()> {
-    // Join the Fiber Discord at https://discord.com/invite/J4KNdeCYGX
+    // Join the Chainbound Discord at https://discord.com/invite/J4KNdeCYGX
     // or write to <sales@chainbound.io> to get a free trial.
     let api_key = std::env::var("CHAINBOUND_API_KEY")?;
 
@@ -62,9 +62,11 @@ pub async fn main() -> anyhow::Result<()> {
     // Simply create a new collector
     let fiber_collector = FiberCollector::new(api_key.clone(), stream_type).await;
 
-    // Now create the Echo Executor to send your bundles to your desired block builders
-    // we also need to instantiate a regular HTTP provider middleware, and two signers
+    // Now create the Echo Executor to send your bundles to your desired block builders.
+    // We also need to instantiate a regular HTTP provider middleware, and two signers
     // (one to actually sign the transactions, one for Flashbots' authentication header)
+    //
+    // For more info, please refer to the documentation at https://echo.chainbound.io/docs/architecture
     let provider = Arc::new(Provider::connect("https://eth.llamarpc.com").await.unwrap());
     let tx_signer = LocalWallet::new(&mut rand::thread_rng()); // or any other signer
     let auth_signer = LocalWallet::new(&mut rand::thread_rng()); // or any other signer
