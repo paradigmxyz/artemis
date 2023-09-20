@@ -191,7 +191,7 @@ impl MevBundle {
 
         // Add reverting tx hashes if present
         if let Some(reverting_tx_hashes) = &self.reverting_tx_hashes {
-            json.push_str("\"revertingTxHashes\":[");
+            json.push_str(",\"revertingTxHashes\":[");
             for (i, tx_hash) in reverting_tx_hashes.iter().enumerate() {
                 json.push_str(&format!("\"0x{}\"", hex::encode(tx_hash)));
                 if i < reverting_tx_hashes.len() - 1 {
@@ -213,7 +213,7 @@ impl MevBundle {
         } else {
             // Add MEV builders if present
             if let Some(mev_builders) = &self.mev_builders {
-                json.push_str("\"mevBuilders\":[");
+                json.push_str(",\"mevBuilders\":[");
                 for (i, mev_builder) in mev_builders.iter().enumerate() {
                     json.push_str(&format!("\"{}\"", mev_builder.to_string()));
                     if i < mev_builders.len() - 1 {
