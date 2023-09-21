@@ -1,20 +1,29 @@
-use ethers::{
-    types::{transaction::eip2718::TypedTransaction, Bytes, TxHash},
-    utils::hex,
-};
+use ethers::types::TransactionRequest;
+use serde::{Deserialize, Serialize};
+
+/// An UUIDv4 identifier, useful for cancelling/replacing bundles.
+pub type ReplacementUuid = String;
 
 /// The list of available MEV builders.
 #[derive(Debug, Default, Clone)]
-#[allow(missing_docs)]
 pub enum BlockBuilder {
+    /// RPC URL: <https://relay.flashbots.net>
     Flashbots,
+    /// RPC URL: <https://rpc.beaverbuild.org/>
     Beaverbuild,
+    /// RPC URL: <https://rsync-builder.xyz/>
     Rsync,
+    /// RPC URL: <https://builder0x69.io>
     Builder0x69,
+    /// RPC URL: <https://rpc.titanbuilder.xyz>
     Titan,
+    /// RPC URL: <https://rpc.f1b.io>
     F1b,
+    /// RPC URL: <https://api.blocknative.com/v1/auction>
     Blocknative,
+    /// RPC URL: <https://rpc.nfactorial.xyz/>
     Nfactorial,
+    /// RPC URL: <https://buildai.net/>
     Buildai,
 
     /// Custom builder name (must be supported by the Echo RPC).
@@ -45,214 +54,229 @@ impl ToString for BlockBuilder {
     }
 }
 
-/// Complete bundle interface, including Echo-specific features.
-/// See the full specs and their meaning here: <https://echo.chainbound.io/docs/usage/api-interface>
-#[derive(Debug, Default, Clone)]
-pub struct MevBundle {
-    /// The transactions to be included in the bundle
-    pub txs: Vec<TypedTransaction>,
-    /// The signed, RLP-encoded version of the txs. This field is filled by the EchoExecutor
-    /// and should not be set manually
-    pub signed_txs: Vec<Bytes>,
-    /// The block number in which the bundle should be included
-    pub block_number: Option<u64>,
-    /// The minimum timestamp of the block in which the bundle is valid
-    pub min_timestamp: Option<u64>,
-    /// The maximum timestamp of the block in which the bundle is valid
-    pub max_timestamp: Option<u64>,
-    /// The hashes of the transactions that are allowed to revert
-    pub reverting_tx_hashes: Option<Vec<TxHash>>,
-    /// The identifier of the bundle to later replace it
-    pub replacement_uuid: Option<String>,
-    /// The list of Block builders to use.
-    /// Default: all available builders
-    pub mev_builders: Option<Vec<BlockBuilder>>,
-    /// Whether to also propagate the bundle on the public mempool.
-    /// WARNING: Please read more: <https://echo.chainbound.io/docs/usage/api-interface#eth_sendbundle>
-    /// Default: false
-    pub use_public_mempool: Option<bool>,
-    /// Whether to hang the HTTP request in order to wait for the inclusion/timeout receipt
-    /// Default: false
-    pub await_receipt: Option<bool>,
-    /// The timeout value in milliseconds for the inclusion/timeout receipt.
-    /// Default: 30.000ms
-    pub await_receipt_timeout_ms: Option<u64>,
+/// A request to send a bundle to the Echo RPC `eth_sendBundle` endpoint
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct SendBundleArgs {
+    /// (Internal) Bundle transactions that have yet to be signed.
+    /// These are not sent to block builders. they will be replaced by the "txs" field
+    /// inside the `standard_features` struct.
+    #[serde(skip_serializing, skip_deserializing)]
+    pub unsigned_txs: Vec<TransactionRequest>,
+
+    /// Standard bundle features include the basic interface that all builders support.
+    #[serde(flatten)]
+    pub standard_features: StandardBundleFeatures,
+
+    /// Echo-specific features and bundle options. These are not sent to block builders.
+    #[serde(flatten, skip_serializing_if = "Option::is_none")]
+    pub echo_features: Option<EchoBundleFeatures>,
 }
 
-impl MevBundle {
-    /// Creates a new bundle with the given transactions
-    pub fn with_txs(txs: Vec<TypedTransaction>) -> Self {
+impl SendBundleArgs {
+    /// Create a new `SendBundleArgs` with the specified unsigned transactions.
+    pub fn with_txs(txs: Vec<TransactionRequest>) -> Self {
         Self {
-            txs,
+            unsigned_txs: txs,
             ..Default::default()
         }
     }
 
-    /// Adds a signed transaction to the bundle
-    pub fn add_signed_tx(&mut self, tx: Bytes) -> &mut Self {
-        self.signed_txs.push(tx);
-        self
+    /// Add a transaction to the bundle.
+    pub fn add_tx(&mut self, tx: TransactionRequest) {
+        self.unsigned_txs.push(tx);
     }
 
-    /// Sets the block number in which the bundle should be included
-    pub fn set_block_number(&mut self, block_number: u64) -> &mut Self {
-        self.block_number = Some(block_number);
-        self
+    /// Set the block number at which the bundle should be mined.
+    pub fn set_block_number(&mut self, block_number: u64) {
+        self.standard_features.block_number = Some(format!("{:#x}", block_number));
     }
 
-    /// Sets the minimum timestamp of the block in which the bundle is valid
-    pub fn set_min_timestamp(&mut self, min_timestamp: u64) -> &mut Self {
-        self.min_timestamp = Some(min_timestamp);
-        self
+    /// Set the minimum timestamp at which the bundle should be mined
+    pub fn set_min_timestamp(&mut self, min_timestamp: u64) {
+        self.standard_features.min_timestamp = Some(min_timestamp);
     }
 
-    /// Sets the maximum timestamp of the block in which the bundle is valid
-    pub fn set_max_timestamp(&mut self, max_timestamp: u64) -> &mut Self {
-        self.max_timestamp = Some(max_timestamp);
-        self
+    /// Set the maximum timestamp at which the bundle should be mined
+    pub fn set_max_timestamp(&mut self, max_timestamp: u64) {
+        self.standard_features.max_timestamp = Some(max_timestamp);
     }
 
-    /// Sets the hashes of the transactions that are allowed to revert
-    pub fn set_reverting_tx_hashes(&mut self, reverting_tx_hashes: Vec<TxHash>) -> &mut Self {
-        self.reverting_tx_hashes = Some(reverting_tx_hashes);
-        self
+    /// Set the transaction hashes of transactions that can revert in the bundle,
+    /// without which the rest of the bundle can still be included.
+    pub fn set_reverting_tx_hashes(&mut self, reverting_tx_hashes: Vec<String>) {
+        self.standard_features.reverting_tx_hashes = Some(reverting_tx_hashes);
     }
 
-    /// Sets the identifier of the bundle to later replace it
-    pub fn set_replacement_uuid(&mut self, replacement_uuid: String) -> &mut Self {
-        self.replacement_uuid = Some(replacement_uuid);
-        self
+    /// Set the UUID of the bundle for later cancellation/replacement.
+    pub fn set_replacement_uuid(&mut self, replacement_uuid: ReplacementUuid) {
+        self.standard_features.replacement_uuid = Some(replacement_uuid);
     }
 
-    /// Sets the list of Block builders to use.
-    pub fn set_mev_builders(&mut self, mev_builders: Vec<BlockBuilder>) -> &mut Self {
-        self.mev_builders = Some(mev_builders);
-        self
+    /// Set the percentage of the gas that should be refunded.
+    pub fn set_refund_percent(&mut self, refund_percent: u64) {
+        self.standard_features.refund_percent = Some(refund_percent);
     }
 
-    /// Sets whether to also propagate the bundle on the public mempool.
-    pub fn set_use_public_mempool(&mut self, use_public_mempool: bool) -> &mut Self {
-        self.use_public_mempool = Some(use_public_mempool);
-        self
+    /// Set the address to which the refund should be sent.
+    pub fn set_refund_recipient(&mut self, refund_recipient: String) {
+        self.standard_features.refund_recipient = Some(refund_recipient);
     }
 
-    /// Sets whether to hang the HTTP request in order to wait for the inclusion/timeout receipt.
-    pub fn set_await_receipt(&mut self, await_receipt: bool) -> &mut Self {
-        self.await_receipt = Some(await_receipt);
-        self
+    /// Set the index of the transaction of which the refund should be calculated.
+    pub fn set_refund_index(&mut self, refund_index: u64) {
+        self.standard_features.refund_index = Some(refund_index);
     }
 
-    /// Sets the timeout value in milliseconds for the inclusion/timeout receipt.
-    pub fn set_await_receipt_timeout_ms(&mut self, await_receipt_timeout_ms: u64) -> &mut Self {
-        self.await_receipt_timeout_ms = Some(await_receipt_timeout_ms);
-        self
+    /// Set the block builders to forward the bundle to. If not specified, the bundle
+    /// will be forwarded to all block builders configured with Echo
+    pub fn set_mev_builders(&mut self, mev_builders: Vec<BlockBuilder>) {
+        self.echo_features
+            .get_or_insert_with(Default::default)
+            .mev_builders = Some(mev_builders.into_iter().map(|b| b.to_string()).collect());
     }
 
-    /// Returns the bundle as a JSON string, ready to be sent to the Echo RPC format.
-    /// We don't use the `Serialize` trait in order to have more control over the
-    /// final formatting.
-    ///
-    /// ## Arguments
-    /// `include_echo_features`: If false, the resulting String will be formatted according to the
-    /// Flashbots API specs. E.g. without the Echo-specific fields. This is useful for creating
-    /// the `X-Flashbots-Signature` header for authentication purposes.
-    pub fn format_json_body(&self, include_echo_features: bool) -> String {
-        let mut json = String::from("{");
-
-        // Check basic requirements
-        if self.signed_txs.is_empty() {
-            panic!("No signed transactions in bundle");
-        }
-        if self.block_number.is_none() {
-            panic!("No block number in bundle");
-        }
-
-        // Add signed transactions
-        json.push_str("\"txs\":[");
-        for (i, tx) in self.signed_txs.iter().enumerate() {
-            json.push_str(&format!("\"0x{}\"", hex::encode(tx)));
-            if i < self.signed_txs.len() - 1 {
-                json.push(',');
-            }
-        }
-
-        // Add block number
-        json.push_str(&format!(",\"blockNumber\":{}", self.block_number.unwrap()));
-
-        // Add min timestamp if present
-        if let Some(min_timestamp) = self.min_timestamp {
-            json.push_str(&format!(",\"minTimestamp\":{}", min_timestamp));
-        }
-
-        // Add max timestamp if present
-        if let Some(max_timestamp) = self.max_timestamp {
-            json.push_str(&format!(",\"maxTimestamp\":{}", max_timestamp));
-        }
-
-        // Add reverting tx hashes if present
-        if let Some(reverting_tx_hashes) = &self.reverting_tx_hashes {
-            json.push_str(",\"revertingTxHashes\":[");
-            for (i, tx_hash) in reverting_tx_hashes.iter().enumerate() {
-                json.push_str(&format!("\"0x{}\"", hex::encode(tx_hash)));
-                if i < reverting_tx_hashes.len() - 1 {
-                    json.push(',');
-                }
-            }
-            json.push(']');
-        }
-
-        // Add replacement UUID if present
-        if let Some(replacement_uuid) = &self.replacement_uuid {
-            json.push_str(&format!(",\"replacementUUID\":\"{}\"", replacement_uuid));
-        }
-
-        if !include_echo_features {
-            // Skip the Echo-specific fields and return the JSON string
-            json.push('}');
-            json
-        } else {
-            // Add MEV builders if present
-            if let Some(mev_builders) = &self.mev_builders {
-                json.push_str(",\"mevBuilders\":[");
-                for (i, mev_builder) in mev_builders.iter().enumerate() {
-                    json.push_str(&format!("\"{}\"", mev_builder.to_string()));
-                    if i < mev_builders.len() - 1 {
-                        json.push(',');
-                    }
-                }
-                json.push(']');
-            }
-
-            // Add use public mempool if present
-            if let Some(use_public_mempool) = &self.use_public_mempool {
-                json.push_str(&format!(",\"usePublicMempool\":{}", use_public_mempool));
-            }
-
-            // Add await receipt if present
-            if let Some(await_receipt) = &self.await_receipt {
-                json.push_str(&format!(",\"awaitReceipt\":{}", await_receipt));
-            }
-
-            // Add await receipt timeout if present
-            if let Some(await_receipt_timeout_ms) = &self.await_receipt_timeout_ms {
-                json.push_str(&format!(
-                    ",\"awaitReceiptTimeoutMs\":{}",
-                    await_receipt_timeout_ms
-                ));
-            }
-
-            json.push('}');
-
-            json
-        }
+    /// Set the boolean flag indicating if the bundle should also be propagated to the public
+    /// mempool by using Fiber's internal network (default: false)
+    pub fn set_use_public_mempool(&mut self, use_public_mempool: bool) {
+        self.echo_features
+            .get_or_insert_with(Default::default)
+            .use_public_mempool = use_public_mempool;
     }
 
-    /// Returns the bundle as a JSON-RPC request string, ready to be sent to the Echo endpoint.
-    pub fn format_json_rpc_request(&self, method: &str, include_echo_features: bool) -> String {
-        format!(
-            "{{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"{}\",\"params\":[{}]}}",
-            method,
-            self.format_json_body(include_echo_features)
-        )
+    /// Set the boolean flag indicating if the HTTP request should hang until the bundle is either
+    /// included, or the timeout is reached (default: false)
+    pub fn set_await_receipt(&mut self, await_receipt: bool) {
+        self.echo_features
+            .get_or_insert_with(Default::default)
+            .await_receipt = await_receipt;
     }
+
+    /// Set the timeout in milliseconds for the HTTP request to hang until the bundle is either
+    /// included, or the timeout is reached
+    pub fn set_await_receipt_timeout_ms(&mut self, await_receipt_timeout_ms: u64) {
+        self.echo_features
+            .get_or_insert_with(Default::default)
+            .await_receipt_timeout_ms = await_receipt_timeout_ms;
+    }
+}
+
+/// Standard bundle features
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct StandardBundleFeatures {
+    /// (Required) Raw bundle transactions as RLP-encoded hex strings.
+    pub txs: Vec<String>,
+
+    /// (Required) The block number at which the bundle should be mined.
+    /// Encoded as hex string.
+    pub block_number: Option<String>,
+
+    /// (Optional) The minimum timestamp at which the bundle should be mined.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub min_timestamp: Option<u64>,
+
+    /// (Optional) The maximum timestamp at which the bundle should be mined.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_timestamp: Option<u64>,
+
+    /// (Optional) The transaction hashes of transactions that can revert in the bundle,
+    /// without which the rest of the bundle can still be included.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reverting_tx_hashes: Option<Vec<String>>,
+
+    /// (Optional) The UUID of the bundle to be replaced.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub replacement_uuid: Option<ReplacementUuid>,
+
+    /// (Optional) The percentage of the gas that should be refunded.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub refund_percent: Option<u64>,
+
+    /// (Optional) The address to which the refund should be sent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub refund_recipient: Option<String>,
+
+    /// (Optional) The index of the transaction of which the refund should be calculated.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub refund_index: Option<u64>,
+
+    /// (Optional) The transaction hashes of which the refund should be calculated.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub refund_tx_hashes: Option<Vec<String>>,
+}
+
+/// Echo-specific features and bundle options
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct EchoBundleFeatures {
+    /// The block builders to forward the bundle to. If not specified, the bundle
+    /// will be forwarded to all block builders configured with Echo
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mev_builders: Option<Vec<String>>,
+
+    /// Boolean flag indicating if the bundle should also be propagated to the public
+    /// mempool by using Fiber's internal network (default: false)
+    #[serde(default = "bool::default")]
+    pub use_public_mempool: bool,
+
+    /// Boolean flag indicating if the HTTP request should hang until the bundle is either
+    /// included, or the timeout is reached (default: false)
+    #[serde(default = "bool::default")]
+    pub await_receipt: bool,
+
+    /// Timeout in milliseconds for the HTTP request to hang until the bundle is either
+    /// included, or the timeout is reached
+    #[serde(default = "default_await_receipt_timeout_ms")]
+    pub await_receipt_timeout_ms: u64,
+}
+
+/// A response from the Echo RPC `eth_sendBundle` endpoint
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SendBundleResponse {
+    /// The bundle hash that was generated from the request body. Each block builder *can*
+    /// generate a different hash for the same bundle, so this is only used for identification.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bundle_hash: Option<String>,
+
+    /// The receipt notification that can be used to track the bundle's inclusion status (included / timed out)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub receipt_notification: Option<BundleNotification>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[allow(unused)]
+/// A request to cancel a bundle using the Echo RPC `eth_cancelBundle` endpoint
+pub struct CancelBundleArgs {
+    /// The UUID of the bundle to be cancelled.
+    pub replacement_uuid: ReplacementUuid,
+
+    /// The block builders to which the cancellation request should be forwarded.
+    /// If not specified, these will be inferred by existing sendBundle requests with the same
+    /// `replacementUuid`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mev_builders: Option<Vec<String>>,
+}
+
+fn default_await_receipt_timeout_ms() -> u64 {
+    30000
+}
+
+/// A notification sent from the echo response handler
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(tag = "status", content = "data")]
+#[allow(unused)]
+#[allow(missing_docs)]
+pub enum BundleNotification {
+    Included {
+        block_number: u64,
+        elapsed_ms: u128,
+        block_builder: Option<String>,
+    },
+    TimedOut {
+        elapsed_ms: u128,
+    },
 }

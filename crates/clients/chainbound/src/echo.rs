@@ -7,18 +7,18 @@ use reqwest::{
     header::{HeaderMap, HeaderValue},
     Client,
 };
-use tracing::{error, info};
+use tracing::{debug, error};
 
 use artemis_core::types::Executor;
 
-use crate::MevBundle;
+use crate::SendBundleArgs;
 
 /// Possible actions that can be executed by the Echo executor
 #[derive(Debug, Clone)]
 #[allow(clippy::large_enum_variant)]
 #[allow(missing_docs)]
 pub enum Action {
-    SendBundle(MevBundle),
+    SendBundle(SendBundleArgs),
 }
 
 const ECHO_RPC_URL: &str = "https://echo-rpc.chainbound.io";
@@ -69,18 +69,23 @@ impl<M: Middleware, S: Signer> EchoExecutor<M, S> {
     pub fn set_rpc_endpoint(&mut self, endpoint: impl Into<String>) {
         self.echo_endpoint = endpoint.into();
     }
+
+    /// Returns a reference to the native ethers middleware
+    pub fn provider(&self) -> Arc<M> {
+        self.inner.clone()
+    }
 }
 
 #[async_trait]
-impl<M, S> Executor<MevBundle> for EchoExecutor<M, S>
+impl<M, S> Executor<SendBundleArgs> for EchoExecutor<M, S>
 where
     M: Middleware + 'static,
     M::Error: 'static,
     S: Signer + 'static,
 {
     /// Send a bundle to transactions to the specified builders
-    async fn execute(&self, mut action: MevBundle) -> Result<()> {
-        if action.txs.is_empty() {
+    async fn execute(&self, mut action: SendBundleArgs) -> Result<()> {
+        if action.unsigned_txs.is_empty() {
             return Err(anyhow!(
                 "Bundle must contain at least one transaction. 
                 To cancel a bundle, use the `eth_cancelBundle` method."
@@ -88,21 +93,23 @@ where
         }
 
         // Sign each transaction in bundle
-        for tx in &action.txs.clone() {
-            let signature = self.tx_signer.sign_transaction(tx).await?;
-            action.add_signed_tx(tx.rlp_signed(&signature));
+        for tx in action.unsigned_txs.iter() {
+            let signature = self.tx_signer.sign_transaction(&tx.clone().into()).await?;
+            let signed = tx.rlp_signed(&signature).to_string();
+            action.standard_features.txs.push(signed);
         }
 
         // Set block number to the next block if not specified
-        if action.block_number.is_none() {
+        if action.standard_features.block_number.is_none() {
             let block_number = self.inner.get_block_number().await?;
-            action.set_block_number(block_number.as_u64() + 1);
+            let next_block_number_hex = format!("0x{:#x}", block_number.as_u64() + 1);
+            action.standard_features.block_number = Some(next_block_number_hex);
         }
 
         // TODO: Simulate bundle
 
         // Sign bundle payload (without the Echo-specific features)
-        let signable_payload = action.format_json_rpc_request("eth_sendBundle", false);
+        let signable_payload = serde_json::to_string(&action.standard_features)?;
         let flashbots_signature = self.auth_signer.sign_message(&signable_payload).await?;
 
         // Create the `X-Flashbots-Signature` header
@@ -110,7 +117,12 @@ where
             format!("{:#x}:{}", self.auth_signer.address(), flashbots_signature).parse()?;
 
         // Prepare the full JSON-RPC request body
-        let request_body = action.format_json_rpc_request("eth_sendBundle", true);
+        let bundle_json = serde_json::to_string(&action)?;
+
+        let request_body = format!(
+            r#"{{"id":1,"jsonrpc":"2.0","method":"eth_sendBundle","params":[{}]}}"#,
+            bundle_json
+        );
 
         // Send bundle
         let echo_response = self
@@ -126,8 +138,10 @@ where
                 let status = send_response.status();
                 let body = send_response.text().await?;
 
+                dbg!(body.clone());
+
                 if status.is_success() {
-                    info!("Echo bundle response: {:?}", body);
+                    debug!("Echo bundle response: {:?}", body);
                 } else {
                     error!("Error in Echo bundle response: {:?}", body);
                 }
