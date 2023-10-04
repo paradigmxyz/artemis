@@ -101,7 +101,7 @@ contract BlindArbTest is Test {
         console.log("amount out: %s", amount_out);
 
         arb.executeArb__WETH_token0(address(V2), address(V3), ARB_AMOUNT, 0);
-        console.log("ARB BALANCE BEFORE: %s", WETH.balanceOf(address(arb)));
+        console.log("ARB BALANCE AFTER: %s", WETH.balanceOf(address(arb)));
 
     }
 
