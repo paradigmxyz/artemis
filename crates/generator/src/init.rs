@@ -32,7 +32,7 @@ pub fn generate_strategy(name: &str) -> TokenStream {
                 Ok(())
             }
 
-            async fn process_event(&mut self, event: Event) -> Option<Action> {
+            async fn process_event(&mut self, event: Event) -> Vec<Action> {
                 match event {}
             }
         }
