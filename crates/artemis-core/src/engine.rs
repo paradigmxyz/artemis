@@ -1,3 +1,4 @@
+use tokio::sync::broadcast::error::RecvError;
 use tokio::sync::broadcast::{self, Sender};
 use tokio::task::JoinSet;
 use tokio_stream::StreamExt;
@@ -92,7 +93,10 @@ where
                             Ok(_) => {}
                             Err(e) => error!("error executing action: {}", e),
                         },
-                        Err(e) => error!("error receiving action: {}", e),
+                        Err(RecvError::Closed) => break,
+                        Err(e) => {
+                            error!("error receiving action: {}", e);
+                        }
                     }
                 }
             });
@@ -116,7 +120,10 @@ where
                                 }
                             }
                         }
-                        Err(e) => error!("error receiving event: {}", e),
+                        Err(RecvError::Closed) => break,
+                        Err(e) => {
+                            error!("error receiving action: {}", e);
+                        }
                     }
                 }
             });
