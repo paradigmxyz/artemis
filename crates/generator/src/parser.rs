@@ -2,7 +2,7 @@ use anyhow::{Error, Result};
 use clap::{Parser, ValueHint};
 use convert_case::{Case, Casing};
 use quote::__private::TokenStream;
-use std::fs::{create_dir, File};
+use std::fs::{create_dir, metadata, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -28,7 +28,7 @@ pub struct StrategyParser {
 
 impl StrategyParser {
     pub fn generate(&self) -> Result<(), Error> {
-        let snake = self.strategy_name.to_case(Case::Snake);
+        let kebab = self.strategy_name.to_case(Case::Kebab);
         let pascal = self.strategy_name.to_case(Case::Pascal);
 
         let strategy_data = generate_strategy(&pascal);
@@ -36,24 +36,38 @@ impl StrategyParser {
         let type_data = generate_types();
         let lib_data = generate_lib();
 
-        let crate_name = snake;
+        let crate_name = kebab;
 
-        generate_crate(
-            &crate_name,
-            &self.root,
-            strategy_data,
-            constants_data,
-            type_data,
-            lib_data,
-        )?;
+        let path: PathBuf = {
+            let mut p: PathBuf = self.root.to_path_buf();
+            p.push(&crate_name);
+            p
+        };
 
+        if !metadata(&path).is_ok() {
+            generate_crate(
+                &crate_name,
+                path,
+                strategy_data,
+                constants_data,
+                type_data,
+                lib_data,
+            )?;
+            return Ok(());
+        }
+
+        run_strategy();
         Ok(())
     }
 }
 
-fn generate_crate<P: AsRef<Path>>(
+fn run_strategy() {
+    //TODO run strategy code
+}
+
+fn generate_crate(
     crate_name: &str,
-    root: P,
+    path: PathBuf,
     strategy: TokenStream,
     constants: TokenStream,
     types: TokenStream,
@@ -65,12 +79,6 @@ fn generate_crate<P: AsRef<Path>>(
         ("ethers", "2"),
         ("async-trait", "0.1.64"),
     ];
-
-    let path: PathBuf = {
-        let mut p: PathBuf = root.as_ref().to_path_buf();
-        p.push(crate_name);
-        p
-    };
 
     // Create crate directory
     create_dir(&path)?;
