@@ -16,3 +16,5 @@ monitoring/grafana/data/
 
 # Dotenv file
 .env
+
+.idea/
