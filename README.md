@@ -27,7 +27,7 @@ The following strategies have been implemented:
 ## Build, Test and Run
 
 First, make sure the following are installed: 
-1. [Anvil](https://github.com/foundry-rs/foundry/tree/master/anvil#installing-from-source)
+1. [Anvil](https://github.com/foundry-rs/foundry/tree/master/crates/anvil#installing-from-source)
 
 In order to build, first clone the github repo: 
 
