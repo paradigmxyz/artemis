@@ -4,13 +4,13 @@ use async_trait::async_trait;
 use ethers::{
     prelude::Middleware,
     providers::PubsubClient,
-    types::{H256, U64},
+    types::{Block, TxHash},
 };
 use std::sync::Arc;
 use tokio_stream::StreamExt;
 
 /// A collector that listens for new blocks, and generates a stream of
-/// [events](NewBlock) which contain the block number and hash.
+/// [events](NewBlock) which contain the entire block
 pub struct BlockCollector<M> {
     provider: Arc<M>,
 }
@@ -18,8 +18,7 @@ pub struct BlockCollector<M> {
 /// A new block event, containing the block number and hash.
 #[derive(Debug, Clone)]
 pub struct NewBlock {
-    pub hash: H256,
-    pub number: U64,
+    pub block: Block<TxHash>,
 }
 
 impl<M> BlockCollector<M> {
@@ -39,10 +38,7 @@ where
 {
     async fn get_event_stream(&self) -> Result<CollectorStream<'_, NewBlock>> {
         let stream = self.provider.subscribe_blocks().await?;
-        let stream = stream.filter_map(|block| match block.hash {
-            Some(hash) => block.number.map(|number| NewBlock { hash, number }),
-            None => None,
-        });
+        let stream = stream.filter_map(|block| Some(NewBlock { block }));
         Ok(Box::pin(stream))
     }
 }
