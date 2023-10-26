@@ -10,7 +10,7 @@ The strategy first syncs its initial state, by loading the set of valid pools in
 
 ### Processing
 
-After the initial sync is done, we stream MEV-Share events, listening for transactions that touch one of the revelant pools. When we find these transactions, we submit a series of backruns, blindly guessing the trade size.  
+After the initial sync is done, we stream MEV-Share events, listening for transactions that touch one of the relevant pools. When we find these transactions, we submit a series of backruns, blindly guessing the trade size.  
 
 
 ## Contracts 
