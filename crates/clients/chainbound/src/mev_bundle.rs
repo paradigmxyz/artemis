@@ -25,6 +25,8 @@ pub enum BlockBuilder {
     Nfactorial,
     /// RPC URL: <https://buildai.net/>
     Buildai,
+    /// RPC URL: <https://rpc.lokibuilder.xyz/>
+    Loki,
 
     /// Custom builder name (must be supported by the Echo RPC).
     /// This can be useful if a new Echo version comes out and this
@@ -48,6 +50,7 @@ impl ToString for BlockBuilder {
             BlockBuilder::Blocknative => "blocknative".to_string(),
             BlockBuilder::Nfactorial => "nfactorial".to_string(),
             BlockBuilder::Buildai => "buildai".to_string(),
+            BlockBuilder::Loki => "lokibuilder".to_string(),
             BlockBuilder::Other(name) => name.to_string(),
             BlockBuilder::All => "all".to_string(),
         }
