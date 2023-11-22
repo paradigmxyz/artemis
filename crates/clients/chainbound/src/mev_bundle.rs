@@ -50,7 +50,7 @@ impl ToString for BlockBuilder {
             BlockBuilder::Blocknative => "blocknative".to_string(),
             BlockBuilder::Nfactorial => "nfactorial".to_string(),
             BlockBuilder::Buildai => "buildai".to_string(),
-            BlockBuilder::Loki => "lokibuilder".to_string(),
+            BlockBuilder::Loki => "loki".to_string(),
             BlockBuilder::Other(name) => name.to_string(),
             BlockBuilder::All => "all".to_string(),
         }
