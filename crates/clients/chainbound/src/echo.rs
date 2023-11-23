@@ -39,7 +39,7 @@ pub struct EchoExecutor<M, S> {
     /// Channel to send websocket messages
     api_requests_tx: mpsc::Sender<String>,
     /// Channel to receive websocket messages
-    pub api_responses_rx: mpsc::Receiver<String>,
+    api_responses_rx: mpsc::Receiver<String>,
 }
 
 impl<M: Middleware, S: Signer> EchoExecutor<M, S> {
@@ -102,7 +102,6 @@ impl<M: Middleware, S: Signer> EchoExecutor<M, S> {
                 }
             }
 
-            // websocket has stopped sending messages, alert the user and exit
             error!("Echo API request channel has stopped sending messages");
         });
 
@@ -172,7 +171,7 @@ where
         // Websocket usage format:
         // https://echo.chainbound.io/docs/usage/api-interface#flashbots-authentication
         let request_body = format!(
-            r#"{{"x-flashbots-signature": "{}","payload": {}}}"#,
+            r#"{{"x-flashbots-signature":"{}","payload":{}}}"#,
             fb_signature,
             generate_jsonrpc_request(action.id, method, action)
         );
@@ -194,7 +193,7 @@ where
 {
     /// Send a transaction to the specified builders
     async fn execute(&self, mut action: SendPrivateTransactionArgs) -> Result<()> {
-        let tx = action.unsigned_tx.clone();
+        let tx = &action.unsigned_tx;
 
         // Sign the transaction
         let signature = self.tx_signer.sign_transaction(&tx.clone().into()).await?;
@@ -211,7 +210,7 @@ where
         // Websocket usage format:
         // https://echo.chainbound.io/docs/usage/api-interface#flashbots-authentication
         let request_body = format!(
-            r#"{{"x-flashbots-signature": "{}","payload": {}}}"#,
+            r#"{{"x-flashbots-signature":"{}","payload":{}}}"#,
             fb_signature,
             generate_jsonrpc_request(action.id, method, action)
         );
@@ -221,5 +220,21 @@ where
         debug!("transaction sent to Echo.");
 
         Ok(())
+    }
+}
+
+#[async_trait]
+impl<M, S> Executor<Action> for EchoExecutor<M, S>
+where
+    M: Middleware + 'static,
+    M::Error: 'static,
+    S: Signer + 'static,
+{
+    /// Send a transaction or bundle to the specified builders
+    async fn execute(&self, action: Action) -> Result<()> {
+        match action {
+            Action::SendBundle(bundle) => self.execute(bundle).await,
+            Action::SendPrivateTransaction(tx) => self.execute(tx).await,
+        }
     }
 }
