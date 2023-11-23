@@ -10,7 +10,10 @@ use tracing::{debug, error};
 
 use artemis_core::types::Executor;
 
-use crate::{utils, SendBundleArgs, SendPrivateTransactionArgs};
+use crate::{
+    utils::{generate_fb_signature, generate_jsonrpc_request},
+    SendBundleArgs, SendPrivateTransactionArgs,
+};
 
 /// Possible actions that can be executed by the Echo executor
 #[derive(Debug, Clone)]
@@ -163,15 +166,15 @@ where
 
         // Sign bundle payload (without the Echo-specific features)
         let method = "eth_sendBundle";
-        let signable_payload = utils::generate_jsonrpc_request(method, &action.standard_features);
-        let fb_signature = utils::generate_fb_signature(&self.auth_signer, &signable_payload).await;
+        let fb_payload = generate_jsonrpc_request(action.id, method, &action.standard_features);
+        let fb_signature = generate_fb_signature(&self.auth_signer, &fb_payload).await;
 
         // Websocket usage format:
         // https://echo.chainbound.io/docs/usage/api-interface#flashbots-authentication
         let request_body = format!(
             r#"{{"x-flashbots-signature": "{}","payload": {}}}"#,
             fb_signature,
-            utils::generate_jsonrpc_request(method, action)
+            generate_jsonrpc_request(action.id, method, action)
         );
 
         // Send bundle request
@@ -191,12 +194,7 @@ where
 {
     /// Send a transaction to the specified builders
     async fn execute(&self, mut action: SendPrivateTransactionArgs) -> Result<()> {
-        let Some(tx) = action.unsigned_tx.take() else {
-            return Err(anyhow!(
-                "SendPrivateTransactionArgs must contain a transaction. 
-                You can set one with the `SendPrivateTransactionArgs::with_tx()` method."
-            ));
-        };
+        let tx = action.unsigned_tx.clone();
 
         // Sign the transaction
         let signature = self.tx_signer.sign_transaction(&tx.clone().into()).await?;
@@ -207,15 +205,15 @@ where
 
         // Sign payload (without the Echo-specific features)
         let method = "eth_sendPrivateRawTransaction";
-        let signable_payload = utils::generate_jsonrpc_request(method, &action.standard_features);
-        let fb_signature = utils::generate_fb_signature(&self.auth_signer, &signable_payload).await;
+        let fb_payload = generate_jsonrpc_request(action.id, method, &action.standard_features);
+        let fb_signature = generate_fb_signature(&self.auth_signer, &fb_payload).await;
 
         // Websocket usage format:
         // https://echo.chainbound.io/docs/usage/api-interface#flashbots-authentication
         let request_body = format!(
             r#"{{"x-flashbots-signature": "{}","payload": {}}}"#,
             fb_signature,
-            utils::generate_jsonrpc_request(method, action)
+            generate_jsonrpc_request(action.id, method, action)
         );
 
         // Send transaction request

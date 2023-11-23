@@ -76,6 +76,11 @@ impl ToString for BlockBuilder {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct SendBundleArgs {
+    /// (Internal) JSON-RPC request ID. This is not sent to block builders.
+    /// Only used for accounting purposes on the websocket request/reply.
+    #[serde(skip_serializing, skip_deserializing)]
+    pub id: u64,
+
     /// (Internal) Bundle transactions that have yet to be signed.
     /// These are not sent to block builders. they will be replaced by the "txs" field
     /// inside the `standard_features` struct.
@@ -101,81 +106,108 @@ impl SendBundleArgs {
     }
 
     /// Add a transaction to the bundle.
-    pub fn add_tx(&mut self, tx: TransactionRequest) {
+    pub fn add_tx(mut self, tx: TransactionRequest) -> Self {
         self.unsigned_txs.push(tx);
+        self
+    }
+
+    /// Set the request ID. This is only used for accounting purposes on the JSON-RPC request/reply.
+    pub fn set_request_id(mut self, id: u64) -> Self {
+        self.id = id;
+        self
     }
 
     /// Set the block number at which the bundle should be mined.
-    pub fn set_block_number(&mut self, block_number: u64) {
+    pub fn set_block_number(mut self, block_number: u64) -> Self {
         self.standard_features.block_number = Some(format!("{:#x}", block_number));
+        self
     }
 
     /// Set the minimum timestamp at which the bundle should be mined
-    pub fn set_min_timestamp(&mut self, min_timestamp: u64) {
+    pub fn set_min_timestamp(mut self, min_timestamp: u64) -> Self {
         self.standard_features.min_timestamp = Some(min_timestamp);
+        self
     }
 
     /// Set the maximum timestamp at which the bundle should be mined
-    pub fn set_max_timestamp(&mut self, max_timestamp: u64) {
+    pub fn set_max_timestamp(mut self, max_timestamp: u64) -> Self {
         self.standard_features.max_timestamp = Some(max_timestamp);
+        self
     }
 
     /// Set the transaction hashes of transactions that can revert in the bundle,
     /// without which the rest of the bundle can still be included.
-    pub fn set_reverting_tx_hashes(&mut self, reverting_tx_hashes: Vec<String>) {
+    pub fn set_reverting_tx_hashes(mut self, reverting_tx_hashes: Vec<String>) -> Self {
         self.standard_features.reverting_tx_hashes = Some(reverting_tx_hashes);
+        self
     }
 
     /// Set the UUID of the bundle for later cancellation/replacement.
-    pub fn set_replacement_uuid(&mut self, replacement_uuid: ReplacementUuid) {
+    pub fn set_replacement_uuid(mut self, replacement_uuid: ReplacementUuid) -> Self {
         self.standard_features.replacement_uuid = Some(replacement_uuid);
+        self
     }
 
     /// Set the percentage of the gas that should be refunded.
-    pub fn set_refund_percent(&mut self, refund_percent: u64) {
+    pub fn set_refund_percent(mut self, refund_percent: u64) -> Self {
         self.standard_features.refund_percent = Some(refund_percent);
+        self
     }
 
     /// Set the address to which the refund should be sent.
-    pub fn set_refund_recipient(&mut self, refund_recipient: String) {
+    pub fn set_refund_recipient(mut self, refund_recipient: String) -> Self {
         self.standard_features.refund_recipient = Some(refund_recipient);
+        self
     }
 
     /// Set the index of the transaction of which the refund should be calculated.
-    pub fn set_refund_index(&mut self, refund_index: u64) {
+    pub fn set_refund_index(mut self, refund_index: u64) -> Self {
         self.standard_features.refund_index = Some(refund_index);
+        self
     }
 
     /// Set the block builders to forward the bundle to. If not specified, the bundle
     /// will be forwarded to all block builders configured with Echo
-    pub fn set_mev_builders(&mut self, mev_builders: Vec<BlockBuilder>) {
+    pub fn set_mev_builders(mut self, mev_builders: Vec<BlockBuilder>) -> Self {
         self.echo_features
             .get_or_insert_with(Default::default)
             .mev_builders = Some(mev_builders.into_iter().map(|b| b.to_string()).collect());
+        self
     }
 
     /// Set the boolean flag indicating if the bundle should also be propagated to the public
     /// mempool by using Fiber's internal network (default: false)
-    pub fn set_use_public_mempool(&mut self, use_public_mempool: bool) {
+    pub fn set_use_public_mempool(mut self, use_public_mempool: bool) -> Self {
         self.echo_features
             .get_or_insert_with(Default::default)
             .use_public_mempool = use_public_mempool;
+        self
     }
 
     /// Set the boolean flag indicating if the HTTP request should hang until the bundle is either
     /// included, or the timeout is reached (default: false)
-    pub fn set_await_receipt(&mut self, await_receipt: bool) {
+    pub fn set_await_receipt(mut self, await_receipt: bool) -> Self {
         self.echo_features
             .get_or_insert_with(Default::default)
             .await_receipt = await_receipt;
+        self
     }
 
     /// Set the timeout in milliseconds for the HTTP request to hang until the bundle is either
     /// included, or the timeout is reached
-    pub fn set_await_receipt_timeout_ms(&mut self, await_receipt_timeout_ms: u64) {
+    pub fn set_await_receipt_timeout_ms(mut self, await_receipt_timeout_ms: u64) -> Self {
         self.echo_features
             .get_or_insert_with(Default::default)
             .await_receipt_timeout_ms = await_receipt_timeout_ms;
+        self
+    }
+
+    /// Set the target block until which the bundle should be retried
+    pub fn set_retry_until(mut self, block_number: u64) -> Self {
+        self.echo_features
+            .get_or_insert_with(Default::default)
+            .retry_until = Some(block_number);
+        self
     }
 }
 
@@ -247,6 +279,15 @@ pub struct EchoBundleFeatures {
     /// included, or the timeout is reached
     #[serde(default = "default_await_receipt_timeout_ms")]
     pub await_receipt_timeout_ms: u64,
+
+    /// Retry sending the bundle on each new block until the specified block number
+    #[serde(
+        default = "Option::default",
+        skip_serializing_if = "Option::is_none",
+        serialize_with = "serialize_opt_u64_as_hex",
+        deserialize_with = "deserialize_opt_u64_or_hex"
+    )]
+    pub retry_until: Option<u64>,
 }
 
 /// A response from the Echo RPC `eth_sendBundle` endpoint
@@ -300,14 +341,19 @@ pub enum InclusionNotification {
 }
 
 /// A request to send a private transaction to the Echo RPC `eth_sendPrivateRawTransaction` endpoint
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct SendPrivateTransactionArgs {
+    /// (Internal) JSON-RPC request ID. This is not sent to block builders.
+    /// Only used for accounting purposes on the websocket request/reply.
+    #[serde(skip_serializing, skip_deserializing)]
+    pub id: u64,
+
     /// (Internal) Transaction that has yet to be signed.
     /// This is not sent to block builders. It will be replaced by the "tx" field
     /// inside the `standard_features` struct.
     #[serde(skip_serializing, skip_deserializing)]
-    pub unsigned_tx: Option<TransactionRequest>,
+    pub unsigned_tx: TransactionRequest,
 
     /// Standard transaction features include the basic interface that all builders support.
     #[serde(flatten)]
@@ -380,4 +426,56 @@ pub struct SendPrivateTransactionResponse {
     /// that were sent as bundles before the bundle is mined.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bundle_hash: Option<String>,
+}
+
+impl SendPrivateTransactionArgs {
+    /// Create a new `SendBundleArgs` with the specified unsigned transactions.
+    pub fn with_tx(tx: TransactionRequest) -> Self {
+        Self {
+            unsigned_tx: tx,
+            ..Default::default()
+        }
+    }
+
+    /// Set the request ID. This is only used for accounting purposes on the JSON-RPC request/reply.
+    pub fn set_request_id(mut self, id: u64) -> Self {
+        self.id = id;
+        self
+    }
+
+    /// Set the block builders to forward the bundle to. If not specified, the bundle
+    /// will be forwarded to all block builders configured with Echo
+    pub fn set_mev_builders(mut self, mev_builders: Vec<BlockBuilder>) -> Self {
+        self.echo_features
+            .get_or_insert_with(Default::default)
+            .mev_builders = Some(mev_builders.into_iter().map(|b| b.to_string()).collect());
+        self
+    }
+
+    /// Set the boolean flag indicating if the bundle should also be propagated to the public
+    /// mempool by using Fiber's internal network (default: false)
+    pub fn set_use_public_mempool(mut self, use_public_mempool: bool) -> Self {
+        self.echo_features
+            .get_or_insert_with(Default::default)
+            .use_public_mempool = use_public_mempool;
+        self
+    }
+
+    /// Set the boolean flag indicating if the HTTP request should hang until the bundle is either
+    /// included, or the timeout is reached (default: false)
+    pub fn set_await_receipt(mut self, await_receipt: bool) -> Self {
+        self.echo_features
+            .get_or_insert_with(Default::default)
+            .await_receipt = await_receipt;
+        self
+    }
+
+    /// Set the timeout in milliseconds for the HTTP request to hang until the bundle is either
+    /// included, or the timeout is reached
+    pub fn set_await_receipt_timeout_ms(mut self, await_receipt_timeout_ms: u64) -> Self {
+        self.echo_features
+            .get_or_insert_with(Default::default)
+            .await_receipt_timeout_ms = await_receipt_timeout_ms;
+        self
+    }
 }

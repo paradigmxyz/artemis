@@ -8,12 +8,13 @@ use serde::{
 use serde_json::to_string;
 
 /// Generate a JSON-RPC request string.
-pub fn generate_jsonrpc_request<T>(method: &str, params: T) -> String
+pub fn generate_jsonrpc_request<T>(id: u64, method: &str, params: T) -> String
 where
     T: Serialize,
 {
     format!(
-        r#"{{"id":1,"jsonrpc":"2.0","method":"{}","params":[{}]}}"#,
+        r#"{{"id":{},"jsonrpc":"2.0","method":"{}","params":[{}]}}"#,
+        id,
         method,
         to_string(&params).unwrap()
     )

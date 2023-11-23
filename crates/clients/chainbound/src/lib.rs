@@ -83,12 +83,13 @@ mod tests {
 
             // Build the bundle with the selected transaction and options.
             // Look at the `SendBundleArgs` struct for info on available methods.
-            let mut bundle = SendBundleArgs::with_txs(vec![tx]);
-            bundle.set_block_number(next_block.as_u64());
-            bundle.set_mev_builders(vec![BlockBuilder::Flashbots, BlockBuilder::Titan]);
-            bundle.set_replacement_uuid("a34daefc-e640-48fc-a1c7-352fc518720f".to_string());
-            bundle.set_refund_percent(90);
-            bundle.set_refund_index(0);
+            let bundle = SendBundleArgs::with_txs(vec![tx])
+                .set_request_id(2) // id of the request, used to match the response
+                .set_block_number(next_block.as_u64())
+                .set_mev_builders(vec![BlockBuilder::Flashbots, BlockBuilder::Titan])
+                .set_replacement_uuid("a34daefc-e640-48fc-a1c7-352fc518720f".to_string())
+                .set_refund_percent(90)
+                .set_refund_index(0);
 
             if let Err(e) = echo_exec.execute(bundle).await {
                 panic!("Failed to send bundle: {}", e);
@@ -98,6 +99,7 @@ mod tests {
 
             let res = echo_exec.receipts_channel().recv().await.unwrap();
             let res = serde_json::to_value(res).unwrap();
+            assert!(&res["id"] == 2);
             assert!(&res["result"]["bundleHash"] != "0x");
         } else {
             println!("Skipping test_chainbound_clients because FIBER_TEST_KEY is not set");
