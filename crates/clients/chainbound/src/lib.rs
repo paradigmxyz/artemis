@@ -20,15 +20,21 @@
 
 /// Fiber Network client module
 pub mod fiber;
-pub use fiber::{Event, FiberCollector, StreamType};
+pub use self::fiber::{Event, FiberCollector, StreamType};
 
 /// Echo RPC client module
 pub mod echo;
-pub use echo::{Action, EchoExecutor};
+pub use self::echo::{Action, EchoExecutor};
 
 /// MEV bundle helper types
-pub mod mev_bundle;
-pub use mev_bundle::{BlockBuilder, BundleNotification, SendBundleArgs, SendBundleResponse};
+pub mod types;
+pub use self::types::{
+    BlockBuilder, EchoApiResponse, InclusionNotification, SendBundleArgs,
+    SendPrivateTransactionArgs,
+};
+
+/// Utility functions
+pub mod utils;
 
 #[cfg(test)]
 mod tests {
@@ -63,7 +69,7 @@ mod tests {
             let auth_signer = LocalWallet::new(&mut rand::thread_rng());
             let account = tx_signer.address();
 
-            let echo_executor = EchoExecutor::new(provider, tx_signer, auth_signer, api_key);
+            let mut echo_exec = EchoExecutor::new(provider, tx_signer, auth_signer, api_key).await;
 
             // Fill in the bundle with a random transaction
             let tx = TransactionRequest::new()
@@ -73,7 +79,7 @@ mod tests {
                 .gas_price(U256::from_dec_str("100000000000000000").unwrap());
 
             // Set the block as the next one
-            let next_block = echo_executor.provider().get_block_number().await.unwrap() + 1;
+            let next_block = echo_exec.provider().get_block_number().await.unwrap() + 1;
 
             // Build the bundle with the selected transaction and options.
             // Look at the `SendBundleArgs` struct for info on available methods.
@@ -84,9 +90,15 @@ mod tests {
             bundle.set_refund_percent(90);
             bundle.set_refund_index(0);
 
-            if let Err(e) = echo_executor.execute(bundle).await {
+            if let Err(e) = echo_exec.execute(bundle).await {
                 panic!("Failed to send bundle: {}", e);
             }
+
+            // ==== Expect a reply by the websocket in the response channel ====
+
+            let res = echo_exec.receipts_channel().recv().await.unwrap();
+            let res = serde_json::to_value(res).unwrap();
+            assert!(&res["result"]["bundleHash"] != "0x");
         } else {
             println!("Skipping test_chainbound_clients because FIBER_TEST_KEY is not set");
         }
