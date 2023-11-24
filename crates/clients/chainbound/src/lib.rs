@@ -69,7 +69,7 @@ mod tests {
             let auth_signer = LocalWallet::new(&mut rand::thread_rng());
             let account = tx_signer.address();
 
-            let mut echo_exec = EchoExecutor::new(provider, tx_signer, auth_signer, api_key).await;
+            let echo_exec = EchoExecutor::new(provider, tx_signer, auth_signer, api_key).await;
 
             // Fill in the bundle with a random transaction
             let tx = TransactionRequest::new()
@@ -98,7 +98,7 @@ mod tests {
             // ==== Expect a reply by the websocket in the response channel ====
 
             let res = echo_exec.receipts_channel().recv().await.unwrap();
-            let res = serde_json::to_value(res).unwrap();
+            let res = serde_json::from_str::<serde_json::Value>(&res).unwrap();
             assert!(&res["id"] == 2);
             assert!(&res["result"]["bundleHash"] != "0x");
         } else {

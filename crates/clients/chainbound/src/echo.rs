@@ -1,10 +1,10 @@
-use std::{borrow::BorrowMut, sync::Arc};
+use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use ethers::{providers::Middleware, signers::Signer};
-use futures::{SinkExt, StreamExt, TryFutureExt, TryStreamExt};
-use tokio::sync::mpsc;
+use futures::{SinkExt, StreamExt, TryStreamExt};
+use tokio::sync::broadcast;
 use tokio_tungstenite::tungstenite::Message;
 use tracing::{debug, error};
 
@@ -37,9 +37,9 @@ pub struct EchoExecutor<M, S> {
     /// the signer to compute the `X-Flashbots-Signature` of the bundle payload
     auth_signer: S,
     /// Channel to send websocket messages
-    api_requests_tx: mpsc::Sender<String>,
+    api_requests_tx: broadcast::Sender<String>,
     /// Channel to receive websocket messages
-    api_responses_rx: mpsc::Receiver<String>,
+    api_responses_rx: broadcast::Receiver<String>,
 }
 
 impl<M: Middleware, S: Signer> EchoExecutor<M, S> {
@@ -72,8 +72,8 @@ impl<M: Middleware, S: Signer> EchoExecutor<M, S> {
             .expect("Failed to connect to Echo via Websocket.");
         debug!("Echo websocket handshake succeeded.");
 
-        let (api_requests_tx, mut api_requests_rx) = mpsc::channel(1024);
-        let (api_responses_tx, api_responses_rx) = mpsc::channel(1024);
+        let (api_requests_tx, mut api_requests_rx) = broadcast::channel(1024);
+        let (api_responses_tx, api_responses_rx) = broadcast::channel(1024);
 
         // Spawn a task to manage the websocket connection with request and response channels
         tokio::spawn(async move {
@@ -82,21 +82,23 @@ impl<M: Middleware, S: Signer> EchoExecutor<M, S> {
             // send all incoming messages to the responses channel in a separate task
             tokio::spawn(async move {
                 let responses_tx = api_responses_tx.clone();
-                incoming.try_for_each(|msg| {
+                incoming.try_for_each(|msg| async {
                     let text = msg.into_text().unwrap_or_else(|e| {
                         error!(error = ?e, "Error converting Echo API response to text");
                         Default::default()
                     });
 
-                    responses_tx.send(text).map_err(|e| {
+                    responses_tx.send(text).unwrap_or_else(|e| {
                         error!(error = ?e, "Error sending Echo API response to the responses channel");
-                        tokio_tungstenite::tungstenite::error::Error::ConnectionClosed
-                    })
+                        Default::default()
+                    });
+
+                    Ok(())
                 }).await.ok();
             });
 
             // send all messages from the intake channel into the websocket
-            while let Some(msg) = api_requests_rx.recv().await {
+            while let Ok(msg) = api_requests_rx.recv().await {
                 if let Err(e) = outgoing.send(Message::Text(msg)).await {
                     error!(error = ?e, "Error sending Echo API request to the websocket")
                 }
@@ -126,8 +128,8 @@ impl<M: Middleware, S: Signer> EchoExecutor<M, S> {
     }
 
     /// Returns a reference to the API receipts channel
-    pub fn receipts_channel(&mut self) -> &mut mpsc::Receiver<String> {
-        self.api_responses_rx.borrow_mut()
+    pub fn receipts_channel(&self) -> broadcast::Receiver<String> {
+        self.api_responses_rx.resubscribe()
     }
 }
 
@@ -177,7 +179,7 @@ where
         );
 
         // Send bundle request
-        self.api_requests_tx.send(request_body).await?;
+        self.api_requests_tx.send(request_body)?;
         debug!("bundle sent to Echo.");
 
         Ok(())
@@ -216,7 +218,7 @@ where
         );
 
         // Send transaction request
-        self.api_requests_tx.send(request_body).await?;
+        self.api_requests_tx.send(request_body)?;
         debug!("transaction sent to Echo.");
 
         Ok(())
