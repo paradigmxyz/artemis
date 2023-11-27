@@ -159,7 +159,7 @@ where
         // Set block number to the next block if not specified
         if action.standard_features.block_number.is_none() {
             let block_number = self.inner.get_block_number().await?;
-            let next_block_number_hex = format!("0x{:#x}", block_number.as_u64() + 1);
+            let next_block_number_hex = format!("{:#x}", block_number.as_u64() + 1);
             action.standard_features.block_number = Some(next_block_number_hex);
         }
 
