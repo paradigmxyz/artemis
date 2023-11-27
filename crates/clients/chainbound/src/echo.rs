@@ -1,17 +1,19 @@
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use ethers::{providers::Middleware, signers::Signer};
-use reqwest::{
-    header::{HeaderMap, HeaderValue},
-    Client,
-};
+use futures::{SinkExt, StreamExt, TryStreamExt};
+use tokio::sync::broadcast;
+use tokio_tungstenite::tungstenite::Message;
 use tracing::{debug, error};
 
 use artemis_core::types::Executor;
 
-use crate::SendBundleArgs;
+use crate::{
+    utils::{generate_fb_signature, generate_jsonrpc_request},
+    SendBundleArgs, SendPrivateTransactionArgs,
+};
 
 /// Possible actions that can be executed by the Echo executor
 #[derive(Debug, Clone)]
@@ -19,22 +21,25 @@ use crate::SendBundleArgs;
 #[allow(missing_docs)]
 pub enum Action {
     SendBundle(SendBundleArgs),
+    SendPrivateTransaction(SendPrivateTransactionArgs),
 }
 
-const ECHO_RPC_URL: &str = "https://echo-rpc.chainbound.io";
+const ECHO_RPC_URL_WS: &str = "wss://echo-rpc.chainbound.io/ws";
 
 /// An Echo executor that sends transactions to the specified block builders
 pub struct EchoExecutor<M, S> {
     /// The Echo RPC endpoint
     echo_endpoint: String,
-    /// The HTTP client to send requests to the Echo RPC
-    echo_client: Client,
     /// The native ethers middleware
     inner: Arc<M>,
     /// The signer to sign transactions before sending to the builders
     tx_signer: S,
     /// the signer to compute the `X-Flashbots-Signature` of the bundle payload
     auth_signer: S,
+    /// Channel to send websocket messages
+    api_requests_tx: broadcast::Sender<String>,
+    /// Channel to receive websocket messages
+    api_responses_rx: broadcast::Receiver<String>,
 }
 
 impl<M: Middleware, S: Signer> EchoExecutor<M, S> {
@@ -45,23 +50,70 @@ impl<M: Middleware, S: Signer> EchoExecutor<M, S> {
     /// - `tx_signer`: The actual signer of the bundle transactions
     /// - `auth_signer`: The signer to compute the `X-Flashbots-Signature` of the bundle payload
     /// - `api_key`: The Echo API key to use
-    pub fn new(inner: Arc<M>, tx_signer: S, auth_signer: S, api_key: impl Into<String>) -> Self {
-        let mut headers = HeaderMap::new();
-        headers.insert("Content-Type", "application/json".parse().unwrap());
-        headers.insert("X-Api-Key", api_key.into().parse().expect("Broken API key"));
+    pub async fn new(
+        inner: Arc<M>,
+        tx_signer: S,
+        auth_signer: S,
+        api_key: impl Into<String>,
+    ) -> Self {
+        let request = tokio_tungstenite::tungstenite::http::Request::builder()
+            .uri(ECHO_RPC_URL_WS)
+            .header("x-api-key", api_key.into())
+            .header("host", "echo-artemis-client")
+            .header("sec-websocket-key", "dGhlIHNhbXBsZSBub25jZQ==")
+            .header("sec-websocket-version", "13")
+            .header("upgrade", "websocket")
+            .header("connection", "upgrade")
+            .body(())
+            .unwrap();
 
-        let echo_client = Client::builder()
-            .timeout(Duration::from_secs(300))
-            .default_headers(headers)
-            .build()
-            .expect("Could not instantiate HTTP client");
+        let (ws_client, _) = tokio_tungstenite::connect_async(request)
+            .await
+            .expect("Failed to connect to Echo via Websocket.");
+        debug!("Echo websocket handshake succeeded.");
+
+        let (api_requests_tx, mut api_requests_rx) = broadcast::channel(1024);
+        let (api_responses_tx, api_responses_rx) = broadcast::channel(1024);
+
+        // Spawn a task to manage the websocket connection with request and response channels
+        tokio::spawn(async move {
+            let (mut outgoing, incoming) = ws_client.split();
+
+            // send all incoming messages to the responses channel in a separate task
+            tokio::spawn(async move {
+                let responses_tx = api_responses_tx.clone();
+                incoming.try_for_each(|msg| async {
+                    let text = msg.into_text().unwrap_or_else(|e| {
+                        error!(error = ?e, "Error converting Echo API response to text");
+                        Default::default()
+                    });
+
+                    responses_tx.send(text).unwrap_or_else(|e| {
+                        error!(error = ?e, "Error sending Echo API response to the responses channel");
+                        Default::default()
+                    });
+
+                    Ok(())
+                }).await.ok();
+            });
+
+            // send all messages from the intake channel into the websocket
+            while let Ok(msg) = api_requests_rx.recv().await {
+                if let Err(e) = outgoing.send(Message::Text(msg)).await {
+                    error!(error = ?e, "Error sending Echo API request to the websocket")
+                }
+            }
+
+            error!("Echo API request channel has stopped sending messages");
+        });
 
         Self {
-            echo_endpoint: ECHO_RPC_URL.into(),
-            echo_client,
+            echo_endpoint: ECHO_RPC_URL_WS.into(),
             inner,
             tx_signer,
             auth_signer,
+            api_requests_tx,
+            api_responses_rx,
         }
     }
 
@@ -72,7 +124,12 @@ impl<M: Middleware, S: Signer> EchoExecutor<M, S> {
 
     /// Returns a reference to the native ethers middleware
     pub fn provider(&self) -> Arc<M> {
-        self.inner.clone()
+        Arc::clone(&self.inner)
+    }
+
+    /// Returns a reference to the API receipts channel
+    pub fn receipts_channel(&self) -> broadcast::Receiver<String> {
+        self.api_responses_rx.resubscribe()
     }
 }
 
@@ -102,53 +159,84 @@ where
         // Set block number to the next block if not specified
         if action.standard_features.block_number.is_none() {
             let block_number = self.inner.get_block_number().await?;
-            let next_block_number_hex = format!("0x{:#x}", block_number.as_u64() + 1);
+            let next_block_number_hex = format!("{:#x}", block_number.as_u64() + 1);
             action.standard_features.block_number = Some(next_block_number_hex);
         }
 
         // TODO: Simulate bundle
 
         // Sign bundle payload (without the Echo-specific features)
-        let signable_payload = serde_json::to_string(&action.standard_features)?;
-        let flashbots_signature = self.auth_signer.sign_message(&signable_payload).await?;
+        let method = "eth_sendBundle";
+        let fb_payload = generate_jsonrpc_request(action.id, method, &action.standard_features);
+        let fb_signature = generate_fb_signature(&self.auth_signer, &fb_payload).await;
 
-        // Create the `X-Flashbots-Signature` header
-        let flashbots_signature_header: HeaderValue =
-            format!("{:#x}:{}", self.auth_signer.address(), flashbots_signature).parse()?;
-
-        // Prepare the full JSON-RPC request body
-        let bundle_json = serde_json::to_string(&action)?;
-
+        // Websocket usage format:
+        // https://echo.chainbound.io/docs/usage/api-interface#flashbots-authentication
         let request_body = format!(
-            r#"{{"id":1,"jsonrpc":"2.0","method":"eth_sendBundle","params":[{}]}}"#,
-            bundle_json
+            r#"{{"x-flashbots-signature":"{}","payload":{}}}"#,
+            fb_signature,
+            generate_jsonrpc_request(action.id, method, action)
         );
 
-        // Send bundle
-        let echo_response = self
-            .echo_client
-            .post(&self.echo_endpoint)
-            .body(request_body)
-            .header("X-Flashbots-Signature", flashbots_signature_header)
-            .send()
-            .await;
-
-        match echo_response {
-            Ok(send_response) => {
-                let status = send_response.status();
-                let body = send_response.text().await?;
-
-                dbg!(body.clone());
-
-                if status.is_success() {
-                    debug!("Echo bundle response: {:?}", body);
-                } else {
-                    error!("Error in Echo bundle response: {:?}", body);
-                }
-            }
-            Err(send_error) => error!("Error while sending bundle to Echo: {:?}", send_error),
-        }
+        // Send bundle request
+        self.api_requests_tx.send(request_body)?;
+        debug!("bundle sent to Echo.");
 
         Ok(())
+    }
+}
+
+#[async_trait]
+impl<M, S> Executor<SendPrivateTransactionArgs> for EchoExecutor<M, S>
+where
+    M: Middleware + 'static,
+    M::Error: 'static,
+    S: Signer + 'static,
+{
+    /// Send a transaction to the specified builders
+    async fn execute(&self, mut action: SendPrivateTransactionArgs) -> Result<()> {
+        let tx = &action.unsigned_tx;
+
+        // Sign the transaction
+        let signature = self.tx_signer.sign_transaction(&tx.clone().into()).await?;
+        let signed = tx.rlp_signed(&signature).to_string();
+        action.standard_features.tx = signed;
+
+        // TODO: Simulate transaction
+
+        // Sign payload (without the Echo-specific features)
+        let method = "eth_sendPrivateRawTransaction";
+        let fb_payload = generate_jsonrpc_request(action.id, method, &action.standard_features);
+        let fb_signature = generate_fb_signature(&self.auth_signer, &fb_payload).await;
+
+        // Websocket usage format:
+        // https://echo.chainbound.io/docs/usage/api-interface#flashbots-authentication
+        let request_body = format!(
+            r#"{{"x-flashbots-signature":"{}","payload":{}}}"#,
+            fb_signature,
+            generate_jsonrpc_request(action.id, method, action)
+        );
+
+        // Send transaction request
+        self.api_requests_tx.send(request_body)?;
+        debug!("transaction sent to Echo.");
+
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl<M, S> Executor<Action> for EchoExecutor<M, S>
+where
+    M: Middleware + 'static,
+    M::Error: 'static,
+    S: Signer + 'static,
+{
+    /// Send a transaction or bundle to the specified builders
+    async fn execute(&self, action: Action) -> Result<()> {
+        match action {
+            Action::SendBundle(bundle) => self.execute(bundle).await,
+            Action::SendPrivateTransaction(tx) => self.execute(tx).await,
+        }
     }
 }

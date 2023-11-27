@@ -62,11 +62,11 @@ pub async fn main() -> anyhow::Result<()> {
     let provider = Arc::new(Provider::connect("wss://eth.llamarpc.com").await.unwrap());
     let tx_signer = LocalWallet::new(&mut rand::thread_rng()); // or any other signer
     let auth_signer = LocalWallet::new(&mut rand::thread_rng()); // or any other signer
-    let echo_executor = Box::new(EchoExecutor::new(provider, tx_signer, auth_signer, api_key));
+    let echo_exec = Box::new(EchoExecutor::new(provider, tx_signer, auth_signer, api_key).await);
 
-    let executor_map = ExecutorMap::new(echo_executor, |action| match action {
-        Action::SendBundle(bundle) => Some(bundle),
-    });
+    // We can simply map all Action types in an Option
+    // since `EchoExecutor` implements `Executor<Action>`.
+    let executor_map = ExecutorMap::new(echo_exec, Some);
 
     // And add these components to your Artemis engine
     let mut engine: Engine<Event, Action> = Engine::default();
