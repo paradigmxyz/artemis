@@ -19,12 +19,38 @@ pub enum BlockBuilder {
     Titan,
     /// RPC URL: <https://rpc.f1b.io>
     F1b,
-    /// RPC URL: <https://api.blocknative.com/v1/auction>
-    Blocknative,
     /// RPC URL: <https://rpc.nfactorial.xyz/>
     Nfactorial,
     /// RPC URL: <https://buildai.net/>
     Buildai,
+    /// RPC URL: <https://rpc.lokibuilder.xyz/>
+    Loki,
+    /// RPC URL: <https://builder.gmbit.co/rpc/>
+    Gambit,
+    /// RPC URL: <https://eth-builder.com/>
+    ETHBuilder,
+    /// RPC URL: <https://rpc.payload.de/>
+    Payload,
+    /// RPC URL: <https://rpc.lightspeedbuilder.info/>
+    LightSpeedBuilder,
+    /// RPC URL: <https://rpc.jetbldr.xyz/>
+    Jetbldr,
+    /// RPC URL: <https://rpc.penguinbuild.org/>
+    PenguinBuild,
+    /// RPC URL: <https://api.edennetwork.io/v1/bundle/>
+    EdenNetwork,
+    /// RPC URL: <https://rpc.tbuilder.xyz/>
+    TBuilder,
+    /// RPC URL: <https://builder.eigenphi.io/>
+    Eigenphi,
+    /// RPC URL: <https://blockbeelder.com/rpc/>
+    BlockBleeder,
+    /// RPC URL: <https://api.securerpc.com/v1/>
+    SecureRPC,
+    /// RPC URL: <https://rpc.pandabuilder.io/>
+    PandaBuilder,
+    /// RPC URL: <https://smithbot.xyz/>
+    SmithBot,
 
     /// Custom builder name (must be supported by the Echo RPC).
     /// This can be useful if a new Echo version comes out and this
@@ -45,9 +71,22 @@ impl ToString for BlockBuilder {
             BlockBuilder::Builder0x69 => "builder0x69".to_string(),
             BlockBuilder::Titan => "titan".to_string(),
             BlockBuilder::F1b => "f1b".to_string(),
-            BlockBuilder::Blocknative => "blocknative".to_string(),
             BlockBuilder::Nfactorial => "nfactorial".to_string(),
             BlockBuilder::Buildai => "buildai".to_string(),
+            BlockBuilder::Loki => "loki".to_string(),
+            BlockBuilder::Gambit => "gambit".to_string(),
+            BlockBuilder::ETHBuilder => "ethbuilder".to_string(),
+            BlockBuilder::Payload => "payload".to_string(),
+            BlockBuilder::LightSpeedBuilder => "lightspeedbuilder".to_string(),
+            BlockBuilder::Jetbldr => "jetbldr".to_string(),
+            BlockBuilder::PenguinBuild => "penguinbuild".to_string(),
+            BlockBuilder::EdenNetwork => "edennetwork".to_string(),
+            BlockBuilder::TBuilder => "tbuilder".to_string(),
+            BlockBuilder::Eigenphi => "eigenphi".to_string(),
+            BlockBuilder::BlockBleeder => "blockbleeder".to_string(),
+            BlockBuilder::SecureRPC => "securerpc".to_string(),
+            BlockBuilder::PandaBuilder => "pandabuilder".to_string(),
+            BlockBuilder::SmithBot => "smithbot".to_string(),
             BlockBuilder::Other(name) => name.to_string(),
             BlockBuilder::All => "all".to_string(),
         }
